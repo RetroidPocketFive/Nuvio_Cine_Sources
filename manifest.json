@@ -1,0 +1,25 @@
+{
+  "version": "1.0.0",
+  "providers": [
+    {
+      "id": "cinejoy-template",
+      "name": "CineJoy (authorised-source template)",
+      "filename": "providers/cinejoy-template.js",
+      "supportedTypes": [
+        "movie",
+        "tv"
+      ],
+      "enabled": false
+    },
+    {
+      "id": "cinewave-template",
+      "name": "CineWave (authorised-source template)",
+      "filename": "providers/cinewave-template.js",
+      "supportedTypes": [
+        "movie",
+        "tv"
+      ],
+      "enabled": false
+    }
+  ]
+}
