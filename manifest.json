@@ -1,55 +1,29 @@
 {
+  "id": "retroidpocketfive-cine-sources",
   "name": "RetroidPocketFive Cine Sources",
-  "version": "2.1.0",
-  "description": "Direct-scraper Nuvio providers for authorized/public CineJoy and CineWave sources.",
-  "scrapers": [
+  "description": "Direct page/player discovery providers for CineJoy and CineWave with Android-visible diagnostics.",
+  "version": "2.2.0",
+  "author": "RetroidPocketFive",
+  "providers": [
     {
       "id": "cinejoy",
       "name": "CineJoy Direct",
-      "description": "Direct HTML scraper for an authorized/public CineJoy site. Visible Android diagnostics are included when no playable stream is found.",
-      "version": "2.1.0",
-      "author": "RetroidPocketFive",
+      "filename": "providers/cinejoy.js",
       "supportedTypes": [
         "movie",
         "tv"
       ],
-      "filename": "providers/cinejoy.js",
-      "enabled": true,
-      "contentLanguage": [
-        "en"
-      ],
-      "formats": [
-        "mp4",
-        "m3u8",
-        "mkv"
-      ],
-      "limited": false,
-      "disabledPlatforms": [],
-      "supportsExternalPlayer": true
+      "enabled": true
     },
     {
       "id": "cinewave",
       "name": "CineWave Direct",
-      "description": "Direct HTML scraper for an authorized/public CineWave site. Visible Android diagnostics are included when no playable stream is found.",
-      "version": "2.1.0",
-      "author": "RetroidPocketFive",
+      "filename": "providers/cinewave.js",
       "supportedTypes": [
         "movie",
         "tv"
       ],
-      "filename": "providers/cinewave.js",
-      "enabled": true,
-      "contentLanguage": [
-        "en"
-      ],
-      "formats": [
-        "mp4",
-        "m3u8",
-        "mkv"
-      ],
-      "limited": false,
-      "disabledPlatforms": [],
-      "supportsExternalPlayer": true
+      "enabled": true
     }
   ]
 }

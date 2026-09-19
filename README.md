@@ -1,20 +1,18 @@
-# RetroidPocketFive Cine Sources — Android-visible diagnostics
+# Nuvio Cine Sources 2.2.0
 
-This build keeps the direct-scraper architecture and changes the diagnostic output so it is visible in Nuvio's Android stream list.
+Direct-scraper architecture for CineJoy and CineWave.
+
+## What changed
+- Promise-only runtime for Hermes/Nuvio compatibility.
+- Candidate page discovery.
+- Detects `<iframe>`, embed/player data attributes, and direct media URLs.
+- Follows up to three player/embed URLs that are explicitly exposed by the fetched page.
+- Scans those player pages for directly exposed `.m3u8`, `.mp4`, `.mkv`, and `.webm` URLs.
+- Android-visible diagnostic cards when no playable URL is found.
 
 ## Test
+For the CineWave test shown during development, use TMDB 278 (The Shawshank Redemption), movie. The known successful candidate observed previously was `https://cinewave.org.lk/movies/278`.
 
-Use a movie such as TMDB `550` (Fight Club). If no playable stream is found, the provider returns one or more diagnostic entries whose **name** contains the candidate result. The Android UI has been observed to display the provider name and quality, but not reliably display the stream title, so diagnostic text is deliberately placed in `name`.
+If the result is still DEBUG, send the complete visible cards. The `P1`, `P2`, etc. entries show whether an exposed player/embed page was found and whether it contained a direct media URL.
 
-Example entries:
-
-- `cinejoy [1] candidates=4`
-- `cinejoy [2] c1:ERROR=HTTP 404`
-- `cinejoy [3] c2:HTTP=OK,chars=18432,streams=0`
-- `cinejoy [4] RESULT=ZERO_STREAMS`
-
-Do not play the DEBUG entries; their URL is a non-playable placeholder.
-
-The provider uses Promise chains and the Nuvio stream object format for Hermes/React Native compatibility. Nuvio's current provider guide documents `getStreams(tmdbId, mediaType, season, episode)` and stream objects with `name`, `title`, `url`, and `quality`. 
-
-The actual CineJoy/CineWave site-specific URL candidates remain modular and should be adjusted only after the visible diagnostic output shows the real response.
+The provider does not attempt to bypass authentication, CAPTCHA, DRM, paywalls, or anti-bot controls.
