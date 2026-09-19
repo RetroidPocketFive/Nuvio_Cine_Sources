@@ -1,1 +1,10 @@
-{"name":"nuvio-cine-sources","version":"1.0.0","description":"Nuvio providers for RetroidPocketFive","scripts":{"build":"node build.js"}}
+{
+  "name": "nuvio-cine-sources",
+  "version": "1.1.0",
+  "description": "Nuvio provider scaffold for authorized CineJoy/CineWave-compatible stream APIs",
+  "private": true,
+  "scripts": {
+    "build": "node build.js",
+    "test": "node test.js"
+  }
+}
