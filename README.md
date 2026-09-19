@@ -1,33 +1,17 @@
-# Nuvio Cine Sources — Android Diagnostic Build
+# Nuvio Cine Sources — Android diagnostic direct-scraper build
 
-Direct-scraper providers for authorized/public CineJoy and CineWave sources.
+This package contains direct-scraper Nuvio providers for CineJoy and CineWave.
 
-## Android debugging
+## Android diagnostic mode
 
-This build has diagnostic logging enabled by default. It does **not** require Node.js on Android.
+Normal Android Nuvio builds do not necessarily expose provider `console.log()` output. This build therefore returns a **DEBUG stream entry** when no playable stream is found. The diagnostic text is shown in the stream result title instead of relying on Android logs.
 
-In Nuvio's Plugin Tester, run `providers/cinejoy.js` or `providers/cinewave.js` and open the **Logs** tab. Look for lines beginning with:
+Test with a known movie such as TMDB `550` (Fight Club), then send the exact `DEBUG — ...` title back for analysis.
 
-- `[cinejoy][START]` / `[cinewave][START]` — confirms `getStreams()` was called.
-- `[...][CANDIDATES]` — shows the URLs the provider will try.
-- `[...][HTTP]` — shows request and HTTP status.
-- `[...][EXTRACT]` — shows what the HTML parser found.
-- `[...][CANDIDATE]` — shows per-page results.
-- `[...][DONE] ZERO STREAMS` — confirms the provider completed without a playable URL.
-- `[...][FATAL]` — unexpected runtime failure.
+The DEBUG entry points to `https://example.com/` and is intentionally non-playable. It exists only to surface diagnostics in the Nuvio stream list.
 
-The logs intentionally do not print the full HTML response or full stream URLs.
+## Important
 
-## What to send back
+The extractor only returns media URLs that are directly exposed by the fetched page HTML (for example `.m3u8`, `.mp4`, `.mkv`, or `.webm`). It does not bypass DRM, CAPTCHA, authentication, paywalls, or anti-bot controls.
 
-If you get zero streams, copy the complete Logs output for one provider and send it back. The most useful test is a known movie such as TMDB `550` (Fight Club). For TV, test with a known TMDB ID plus season/episode.
-
-## Build
-
-`node build.js` copies the source providers into `providers/`.
-
-No Node.js installation is required on the Android device itself; Node is only needed if you build/test the repository on a computer.
-
-## Scope
-
-The extractors only parse directly exposed HTTP(S) media URLs and ordinary page markup. They do not attempt to bypass DRM, CAPTCHA, authentication, paywalls, or anti-bot protections.
+The site-specific URL patterns are intentionally modular because public CineJoy/CineWave pages may change their routes or use third-party embeds.
