@@ -1,9 +1,6 @@
 {
   "name": "nuvio-cine-sources",
-  "version": "2.2.0",
+  "version": "3.0.0",
   "private": true,
-  "scripts": {
-    "build": "node build.js",
-    "test": "node test.js"
-  }
+  "scripts": { "build": "node build.js" }
 }
