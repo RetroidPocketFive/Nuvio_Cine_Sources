@@ -1,25 +1,4 @@
-{
-  "version": "1.0.0",
-  "providers": [
-    {
-      "id": "cinejoy-template",
-      "name": "CineJoy (authorised-source template)",
-      "filename": "providers/cinejoy-template.js",
-      "supportedTypes": [
-        "movie",
-        "tv"
-      ],
-      "enabled": false
-    },
-    {
-      "id": "cinewave-template",
-      "name": "CineWave (authorised-source template)",
-      "filename": "providers/cinewave-template.js",
-      "supportedTypes": [
-        "movie",
-        "tv"
-      ],
-      "enabled": false
-    }
-  ]
-}
+[
+  {"id":"cinejoy","name":"CineJoy","description":"CineJoy provider template for authorised/public media endpoints.","version":"1.0.0","author":"RetroidPocketFive","supportedTypes":["movie","tv"],"filename":"providers/cinejoy.js","enabled":false,"logo":"","contentLanguage":["en"],"formats":["mp4","mkv"],"limited":false,"disabledPlatforms":[],"supportsExternalPlayer":true},
+  {"id":"cinewave","name":"CineWave","description":"CineWave provider template for authorised/public media endpoints.","version":"1.0.0","author":"RetroidPocketFive","supportedTypes":["movie","tv"],"filename":"providers/cinewave.js","enabled":false,"logo":"","contentLanguage":["en"],"formats":["mp4","mkv"],"limited":false,"disabledPlatforms":[],"supportsExternalPlayer":true}
+]

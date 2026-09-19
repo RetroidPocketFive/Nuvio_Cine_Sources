@@ -1,11 +1,1 @@
-{
-  "name": "nuvio-cine-source-template",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "build": "node build.js"
-  },
-  "devDependencies": {
-    "esbuild": "^0.25.0"
-  }
-}
+{"name":"nuvio-cine-sources","version":"1.0.0","description":"Nuvio providers for RetroidPocketFive","scripts":{"build":"node build.js"}}

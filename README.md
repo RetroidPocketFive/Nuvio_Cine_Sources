@@ -1,55 +1,13 @@
-# Nuvio Cine Source Template
+# Nuvio_Cine_Sources
 
-This is a safe starting point for a Nuvio provider repository.
+Repository formatted for the current Nuvio provider manifest.
 
-## Current inspection
+Install repository in Nuvio using:
+https://raw.githubusercontent.com/RetroidPocketFive/Nuvio_Cine_Sources/main/manifest.json
 
-The public CineJoy pages expose movie/series metadata and episode listings. Search results also indicate that CineJoy uses a separate resolver/API infrastructure for playback. The public CineWave homepage exposes a catalogue UI.
+Then enable the individual providers.
 
-This package intentionally does **not** implement extraction/decryption of protected third-party streams. It is designed to be completed with an official/public API or direct media URLs that you are authorised to access.
+## Current status
+The CineJoy and CineWave providers are installable templates. They currently return an empty stream list because no authorised/public playback API or direct media endpoint has been implemented.
 
-## Nuvio provider interface
-
-A provider exports:
-
-```js
-getStreams(tmdbId, mediaType, season, episode)
-```
-
-and returns:
-
-```js
-[
-  {
-    name: "Provider",
-    title: "1080p",
-    url: "https://example.com/video.m3u8",
-    quality: "1080p"
-  }
-]
-```
-
-## Build
-
-Requires Node.js:
-
-```bash
-npm install
-npm run build
-```
-
-The generated files appear in `providers/`.
-
-## Nuvio
-
-Nuvio provider repositories use a `manifest.json` that points to the bundled provider files. Test the generated provider in Nuvio's Plugin Tester before enabling it.
-
-## Completing the adapters
-
-For a legitimate source, the next information needed is one of:
-
-* documented API endpoint and authentication method;
-* direct HLS/MP4 URLs returned by the source's API;
-* an API response example showing how a TMDB/IMDb ID maps to a media URL.
-
-Do not add code intended to bypass DRM, authentication, paywalls, CAPTCHAs, anti-bot systems, or encrypted/protected playback.
+This package does not include DRM, authentication, paywall, CAPTCHA, anti-bot, or other access-control bypass logic.
