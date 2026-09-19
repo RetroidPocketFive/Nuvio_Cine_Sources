@@ -1,6 +1,7 @@
 const PROVIDER = 'cinewave';
 const BASE_URL = 'https://cinewave.org.lk';
 const DIAGNOSTIC = true;
+const VISIBLE_DIAGNOSTIC = true;
 const DEFAULT_HEADERS = {
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128 Safari/537.36",
   "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -14,6 +15,19 @@ function log(stage, message, extra) {
     try { line += " | " + JSON.stringify(extra); } catch (_) {}
   }
   console.log(line);
+}
+
+function visibleDiagnostic(report) {
+  if (!VISIBLE_DIAGNOSTIC) return [];
+  var compact = String(report || "No diagnostic information available.").replace(/\s+/g, " ").trim();
+  if (compact.length > 700) compact = compact.slice(0, 697) + "...";
+  return [{
+    name: PROVIDER + " DEBUG",
+    title: "DEBUG — " + compact,
+    url: "https://example.com/",
+    quality: "Debug",
+    headers: { "User-Agent": "Nuvio" }
+  }];
 }
 
 function fetchText(url, extra) {
@@ -104,34 +118,44 @@ function candidates(tmdbId, mediaType, season, episode) {
 }
 
 function getStreams(tmdbId, mediaType, season, episode) {
+  var report = [];
   log("START", "getStreams called", { tmdbId: tmdbId, mediaType: mediaType, season: season, episode: episode, baseUrl: BASE_URL });
-  if (!tmdbId) { log("VALIDATE", "missing TMDB id"); return Promise.resolve([]); }
-  if (mediaType !== "movie" && mediaType !== "tv") { log("VALIDATE", "unsupported media type", mediaType); return Promise.resolve([]); }
-  if (mediaType === "tv" && (!Number.isFinite(Number(season)) || !Number.isFinite(Number(episode)))) { log("VALIDATE", "TV requires numeric season and episode"); return Promise.resolve([]); }
+  if (!tmdbId) return Promise.resolve(visibleDiagnostic("missing TMDB id"));
+  if (mediaType !== "movie" && mediaType !== "tv") return Promise.resolve(visibleDiagnostic("unsupported media type: " + mediaType));
+  if (mediaType === "tv" && (!Number.isFinite(Number(season)) || !Number.isFinite(Number(episode)))) {
+    return Promise.resolve(visibleDiagnostic("TV requires numeric season and episode"));
+  }
 
   var urls = candidates(tmdbId, mediaType, season, episode);
+  report.push("candidates=" + urls.length);
   log("CANDIDATES", "generated", urls);
 
   return urls.reduce(function(chain, url, index) {
     return chain.then(function(streams) {
-      if (streams.length) { log("DONE", "stopping after streams found", { count: streams.length, candidate: index + 1 }); return streams; }
+      if (streams.length) return streams;
       log("CANDIDATE", "trying " + (index + 1) + "/" + urls.length, url);
       return fetchText(url, { Referer: BASE_URL + "/" }).then(function(html) {
         var found = extractStreams(html, url);
-        log("CANDIDATE", "result", { candidate: index + 1, streams: found.length });
+        report.push("c" + (index + 1) + ":HTTP=OK,chars=" + html.length + ",streams=" + found.length);
         return found;
       }).catch(function(err) {
-        log("ERROR", "candidate failed", { candidate: index + 1, url: url, error: String(err && err.message || err) });
+        var e = String(err && err.message || err);
+        report.push("c" + (index + 1) + ":ERROR=" + e);
+        log("ERROR", "candidate failed", { candidate: index + 1, url: url, error: e });
         return [];
       });
     });
   }, Promise.resolve([])).then(function(streams) {
-    log("DONE", "getStreams complete", { streams: streams.length });
-    if (!streams.length) log("DONE", "ZERO STREAMS - send the full Plugin Tester Logs to ChatGPT");
-    return streams;
+    if (streams.length) {
+      log("DONE", "getStreams complete", { streams: streams.length });
+      return streams;
+    }
+    report.push("RESULT=ZERO_STREAMS");
+    report.push("If all candidates are HTTP=OK but streams=0, the site likely uses a player/embed URL not exposed as a direct media URL in the page HTML.");
+    return visibleDiagnostic(report.join(" | "));
   }).catch(function(err) {
-    log("FATAL", String(err && err.message || err));
-    return [];
+    var e = String(err && err.message || err);
+    return visibleDiagnostic("FATAL=" + e + " | " + report.join(" | "));
   });
 }
 
