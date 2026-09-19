@@ -1,7 +1,6 @@
 {
   "name": "nuvio-cine-sources",
-  "version": "1.1.0",
-  "description": "Nuvio provider scaffold for authorized CineJoy/CineWave-compatible stream APIs",
+  "version": "2.0.0",
   "private": true,
   "scripts": {
     "build": "node build.js",

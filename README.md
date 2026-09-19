@@ -1,53 +1,19 @@
-# Nuvio Cine Sources
+# RetroidPocketFive — Nuvio Cine Sources (Direct Scraper)
 
-Nuvio providers for authorized/public playback sources.
+This repository uses Nuvio's multi-file provider architecture. Providers fetch public/authorized HTML pages directly and extract already-exposed media URLs. Nuvio providers run locally in Hermes and must export `getStreams(tmdbId, mediaType, season, episode)`.
 
-## What was fixed
-
-- Real `getStreams(tmdbId, mediaType, season, episode)` implementation.
-- Movie and TV parameter validation.
-- JSON API response parsing.
-- Nuvio stream-object normalization.
-- Quality normalization (4K/1080p/720p/etc.).
-- Optional playback headers and size.
-- Promise-based HTTP flow compatible with Hermes-style runtimes.
-- Working build script.
-- Provider smoke tests.
-- Providers disabled by default until an authorized playback endpoint is configured.
-
-## API contract
-
-Set `API_BASE` in the provider source to an endpoint you operate or are authorized to use.
-
-It receives:
-
-`tmdbId`, `type`, and for TV `season` + `episode`.
-
-It may return:
-
-```json
-{
-  "streams": [
-    {
-      "name": "My Source",
-      "title": "1080p",
-      "url": "https://example.com/video.m3u8",
-      "quality": "1080p",
-      "headers": {
-        "Referer": "https://example.com/"
-      }
-    }
-  ]
-}
-```
-
-or an array of stream objects.
-
-## Build/test
+## Build
 
 ```bash
-npm test
+npm install
 npm run build
+node test.js
 ```
 
-This repository intentionally does not implement DRM, CAPTCHA, authentication, paywall, or anti-bot bypasses. If you control the media source or have permission to use it, connect its documented/public playback API.
+The build writes `providers/cinejoy.js` and `providers/cinewave.js`.
+
+## Important
+
+The default base URLs are the public domains currently identified for CineJoy and CineWave. Site URL structures can change, and a crawlable page is not proof that a playable media URL is exposed to the Nuvio runtime. The extractor intentionally handles direct HTML/JSON media URLs only; it does not bypass DRM, CAPTCHA, login, paywalls, or anti-bot controls.
+
+If your authorized CineJoy/CineWave instance uses different paths, edit only the `buildCandidateUrls()` logic or the provider `BASE_URL`.

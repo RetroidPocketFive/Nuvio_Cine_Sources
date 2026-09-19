@@ -1,14 +1,9 @@
 const fs = require("fs");
 const path = require("path");
-const ids = ["cinejoy", "cinewave"];
-for (const id of ids) {
-  const src = path.join(__dirname, "src", id, "index.js");
-  const out = path.join(__dirname, "providers", id + ".js");
-  if (!fs.existsSync(src)) throw new Error("Missing " + src);
-  const code = fs.readFileSync(src, "utf8");
-  if (!code.includes("module.exports") || !code.includes("getStreams"))
-    throw new Error(id + ": getStreams export missing");
-  fs.writeFileSync(out, code + "\n", "utf8");
-  console.log("Built providers/" + id + ".js");
+const providers = ["cinejoy", "cinewave"];
+for (const name of providers) {
+  const src = path.join(__dirname, "src", name, "index.js");
+  const out = path.join(__dirname, "providers", `${name}.js`);
+  fs.copyFileSync(src, out);
+  console.log(`Built ${path.relative(__dirname, out)}`);
 }
-console.log("Build complete.");
