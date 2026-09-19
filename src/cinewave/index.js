@@ -18,16 +18,17 @@ function log(stage, message, extra) {
 }
 
 function visibleDiagnostic(report) {
-  if (!VISIBLE_DIAGNOSTIC) return [];
-  var compact = String(report || "No diagnostic information available.").replace(/\s+/g, " ").trim();
-  if (compact.length > 700) compact = compact.slice(0, 697) + "...";
-  return [{
-    name: PROVIDER + " DEBUG",
-    title: "DEBUG — " + compact,
-    url: "https://example.com/",
-    quality: "Debug",
-    headers: { "User-Agent": "Nuvio" }
-  }];
+  var list = Array.isArray(report) ? report : [report];
+  return list.map(function(item, index) {
+    var text = String(item || "No diagnostic information available.").replace(/\s+/g, " ").trim();
+    if (text.length > 180) text = text.slice(0, 177) + "...";
+    return {
+      name: PROVIDER + " [" + (index + 1) + "] " + text,
+      title: "Diagnostic",
+      url: "https://example.com/",
+      quality: "Debug"
+    };
+  });
 }
 
 function fetchText(url, extra) {
@@ -152,7 +153,7 @@ function getStreams(tmdbId, mediaType, season, episode) {
     }
     report.push("RESULT=ZERO_STREAMS");
     report.push("If all candidates are HTTP=OK but streams=0, the site likely uses a player/embed URL not exposed as a direct media URL in the page HTML.");
-    return visibleDiagnostic(report.join(" | "));
+    return visibleDiagnostic(report);
   }).catch(function(err) {
     var e = String(err && err.message || err);
     return visibleDiagnostic("FATAL=" + e + " | " + report.join(" | "));
