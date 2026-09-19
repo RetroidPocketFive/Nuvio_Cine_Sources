@@ -1,82 +1,118 @@
-// Promise-only implementation for Nuvio/Hermes compatibility.
-var UA = 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/128 Mobile Safari/537.36';
-var HEADERS = { 'User-Agent': UA, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 'Accept-Language': 'en-US,en;q=0.8' };
+var PROVIDER = "cinewave";
+var BASE_URL = "https://cinewave.org.lk";
+var DEBUG_URL = "https://example.com/";
+var UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128 Safari/537.36";
 
-function abs(value, base) {
-  if (!value) return null;
-  var v = String(value).replace(/&amp;/g,'&').replace(/\\u0026/g,'&').replace(/\\\//g,'/').trim();
-  try { return new URL(v, base).toString(); } catch (_) { return null; }
+function diag(text, n) {
+  var s = String(text || "").replace(/\s+/g, " ").trim();
+  if (s.length > 180) s = s.slice(0, 177) + "...";
+  return { name: PROVIDER + " [" + n + "] " + s, title: "Debug", url: DEBUG_URL, quality: "Debug" };
 }
-function clean(s){ return String(s||'').replace(/\\s+/g,' ').trim(); }
-function quality(s){ var x=String(s||'').toLowerCase(); if(/2160|4k|uhd/.test(x))return '4K'; if(/1440/.test(x))return '1440p'; if(/1080/.test(x))return '1080p'; if(/720/.test(x))return '720p'; if(/480/.test(x))return '480p'; return 'Unknown'; }
-function fetchText(url, ref){
-  var h={}; Object.keys(HEADERS).forEach(function(k){h[k]=HEADERS[k];}); if(ref) h.Referer=ref;
-  return fetch(url,{headers:h,redirect:'follow'}).then(function(r){
-    var status=r&&r.status!=null?r.status:0;
-    if(!r.ok) return Promise.reject(new Error('HTTP '+status));
-    return r.text().then(function(text){ return {status:status,text:text,url:url}; });
+
+function visible(report) {
+  return report.map(function (x, i) { return diag(x, i + 1); });
+}
+
+function fetchText(url, referer) {
+  return fetch(url, { headers: { "User-Agent": UA, "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.8", "Referer": referer || BASE_URL + "/" }, redirect: "follow" }).then(function (r) {
+    if (!r || !r.ok) throw new Error("HTTP " + (r && r.status !== undefined ? r.status : "unknown"));
+    return r.text().then(function (t) { return { status: r.status, text: t }; });
   });
 }
-function attr(tag,name){ var m=tag.match(new RegExp(name+"\\s*=\\s*[\"\']([^\"\']+)[\"\']","i")); return m?m[1]:null; }
-function isMedia(u){ return /\.(?:m3u8|mp4|mkv|webm)(?:[?#]|$)/i.test(u||''); }
-function addMedia(out,url,label,pageUrl){
-  var u=abs(url,pageUrl); if(!u || !/^https?:\/\//i.test(u) || !isMedia(u)) return;
-  if(out.some(function(x){return x.url===u;})) return;
-  var q=quality((label||'')+' '+u);
-  out.push({name:'cinewave Direct',title:label||q,url:u,quality:q,headers:{'Referer':pageUrl,'User-Agent':UA}});
+
+function abs(v, base) {
+  if (!v) return null;
+  var s = String(v).replace(/&amp;/g, "&").replace(/\\u0026/g, "&").trim();
+  try { return new URL(s, base).toString(); } catch (_) { return null; }
 }
-function extractMedia(html,pageUrl,provider,out){
-  var stats={video:0,source:0,mediaAttrs:0,jsMedia:0,jsonLd:0,absoluteMedia:0,iframes:0,embedAttrs:0,scripts:0};
-  var m, tag, src;
-  var tags=/<(video|source)\b[^>]*>/gi;
-  while((m=tags.exec(html))){ tag=m[0]; if(m[1].toLowerCase()==='video')stats.video++;else stats.source++; src=attr(tag,'src')||attr(tag,'data-src')||attr(tag,'data-video')||attr(tag,'data-url')||attr(tag,'data-file'); if(src){stats.mediaAttrs++;addMedia(out,src,attr(tag,'data-quality')||attr(tag,'label')||attr(tag,'title'),pageUrl);} }
-  var re=/(?:file|src|source|url|stream|playbackUrl|videoUrl|hls|dash)\s*[:=]\s*["\']([^"\']+\.(?:m3u8|mp4|mkv|webm)(?:\?[^"\']*)?)["\']/gi;
-  while((m=re.exec(html))){stats.jsMedia++;addMedia(out,m[1],null,pageUrl);}
-  var ld=/["\']contentUrl["\']\s*:\s*["\']([^"\']+)["\']/gi; while((m=ld.exec(html))){stats.jsonLd++;addMedia(out,m[1],null,pageUrl);}
-  var ar=/https?:\/\/[^\s"'<>]+\.(?:m3u8|mp4|mkv|webm)(?:\?[^\s"'<>]*)?/gi; while((m=ar.exec(html))){stats.absoluteMedia++;addMedia(out,m[0],null,pageUrl);}
-  var ifr=/<iframe\b[^>]*>/gi; while((m=ifr.exec(html))){stats.iframes++;src=attr(m[0],'src')||attr(m[0],'data-src')||attr(m[0],'data-url');if(src)out._players.push(abs(src,pageUrl));}
-  var emb=/(?:data-(?:embed|player|iframe|video|url)|embed|player(?:Url|URL)|iframe(?:Url|URL))\s*=\s*["\']([^"\']+)["\']/gi; while((m=emb.exec(html))){stats.embedAttrs++;out._players.push(abs(m[1],pageUrl));}
-  stats.scripts=(html.match(/<script\b/gi)||[]).length;
-  return stats;
+
+function quality(s) {
+  s = String(s || "").toLowerCase();
+  if (/2160|4k|uhd/.test(s)) return "4K";
+  if (/1440/.test(s)) return "1440p";
+  if (/1080/.test(s)) return "1080p";
+  if (/720/.test(s)) return "720p";
+  if (/480/.test(s)) return "480p";
+  return "Unknown";
 }
-function visible(provider,entries){ return entries.map(function(x,i){ var s=clean(x); if(s.length>190)s=s.slice(0,187)+'...'; return {name:provider+' ['+(i+1)+'] '+s,title:'Diagnostic',url:'https://example.com/',quality:'Debug'}; }); }
-function unique(a){var o=[],s={}; (a||[]).forEach(function(x){if(x&&!s[x]){s[x]=1;o.push(x);}});return o;}
-function candidateUrls(base,id,type,season,episode){
-  var b=base.replace(/\/$/,''); var x=encodeURIComponent(String(id));
-  if(type==='movie') return [b+'/movie/'+x,b+'/movies/'+x,b+'/watch/movie/'+x,b+'/watch/'+x];
-  var s=Number(season),e=Number(episode); return [b+'/tv/'+x+'/'+s+'/'+e,b+'/tv/'+x+'?season='+s+'&episode='+e,b+'/watch/tv/'+x+'/'+s+'/'+e,b+'/watch/'+x+'/'+s+'/'+e];
+
+function addMedia(out, url, label, pageUrl) {
+  var u = abs(url, pageUrl);
+  if (!u || !/^https?:\/\//i.test(u)) return;
+  if (!/\.(?:m3u8|mp4|mkv|webm)(?:[?#]|$)/i.test(u)) return;
+  if (out.some(function (x) { return x.url === u; })) return;
+  var q = quality((label || "") + " " + u);
+  out.push({ name: "CineWave Direct", title: label || q, url: u, quality: q, headers: { Referer: pageUrl, "User-Agent": UA } });
 }
-function runProvider(provider,base,tmdbId,type,season,episode){
-  var report=['BASE='+base];
-  if(!tmdbId)return Promise.resolve(visible(provider,['ERROR=missing TMDB id']));
-  var urls=candidateUrls(base,tmdbId,type,season,episode); report.push('CANDIDATES='+urls.length);
-  var media=[]; var pages=[]; var playerUrls=[];
-  function tryCandidate(i){
-    if(i>=urls.length) return Promise.resolve();
-    var u=urls[i];
-    return fetchText(u,base+'/').then(function(r){
-      pages.push(r); var tmp=[]; tmp._players=[]; var st=extractMedia(r.text,r.url,provider,tmp); media=media.concat(tmp); playerUrls=playerUrls.concat(tmp._players||[]); report.push('C'+(i+1)+'=HTTP '+r.status+' HTML='+r.text.length+' IFRAME='+st.iframes+' EMBED='+st.embedAttrs+' MEDIA='+media.length); return media.length?Promise.resolve():tryCandidate(i+1);
-    }).catch(function(e){report.push('C'+(i+1)+'='+e.message);return tryCandidate(i+1);});
+
+function attr(tag, name) {
+  var r = new RegExp(name + "\\s*=\\s*[\\\"']([^\\\"']+)[\\\"']", "i").exec(tag);
+  return r ? r[1] : null;
+}
+
+function inspect(html, pageUrl) {
+  var media = [], players = [], iframes = 0, embeds = 0, scripts = 0, dataUrls = 0;
+  var m, tag;
+  var tagRe = /<(iframe|embed)\b[^>]*>/gi;
+  while ((m = tagRe.exec(html))) {
+    tag = m[0];
+    var src = attr(tag, "src") || attr(tag, "data-src") || attr(tag, "data-url") || attr(tag, "data-embed") || attr(tag, "data-video");
+    if (m[1].toLowerCase() === "iframe") iframes++; else embeds++;
+    if (src) { var u = abs(src, pageUrl); if (u && players.indexOf(u) < 0) players.push(u); }
   }
-  return tryCandidate(0).then(function(){
-    if(media.length) return media;
-    playerUrls=unique(playerUrls).filter(function(u){return /^https?:\/\//i.test(u);});
-    report.push('PLAYER_URLS='+playerUrls.length);
-    // Follow up to three discovered player/embed pages. This does not bypass access controls; it only follows URLs exposed in the page.
-    return playerUrls.slice(0,3).reduce(function(chain,purl,idx){
-      return chain.then(function(){ return fetchText(purl,pages.length?pages[pages.length-1].url:base+'/').then(function(r){ var tmp=[]; tmp._players=[]; var st=extractMedia(r.text,r.url,provider,tmp); report.push('P'+(idx+1)+'=HTTP '+r.status+' HTML='+r.text.length+' IFRAME='+st.iframes+' EMBED='+st.embedAttrs+' MEDIA='+tmp.length); if(tmp.length) media=media.concat(tmp); return null; }).catch(function(e){report.push('P'+(idx+1)+'='+e.message);}); });
-    },Promise.resolve()).then(function(){return media;});
-  }).then(function(){
-    media=media.filter(function(x,i,a){return a.findIndex(function(y){return y.url===x.url;})===i;});
-    if(media.length){report.push('RESULT=STREAMS '+media.length); return {streams:media,report:report};}
-    report.push('RESULT=ZERO_STREAMS'); report.push('NO_DIRECT_MEDIA_AFTER_PLAYER_FOLLOW'); return {streams:[],report:report};
-  });
+  var videoRe = /<(video|source)\b[^>]*>/gi;
+  while ((m = videoRe.exec(html))) {
+    tag = m[0];
+    var v = attr(tag, "src") || attr(tag, "data-src") || attr(tag, "data-video") || attr(tag, "data-url");
+    if (v) addMedia(media, v, attr(tag, "title") || attr(tag, "label") || attr(tag, "data-quality"), pageUrl);
+  }
+  var scriptRe = /<script\b[^>]*>/gi; while (scriptRe.exec(html)) scripts++;
+  var dataRe = /(?:data-(?:url|video|src|embed)|playerUrl|embedUrl|videoUrl|streamUrl)\s*[:=]\s*["']([^"']+)["']/gi;
+  while ((m = dataRe.exec(html))) { dataUrls++; var du = abs(m[1], pageUrl); if (du && players.indexOf(du) < 0) players.push(du); }
+  var mediaRe = /https?:\/\/[^\s"'<>]+\.(?:m3u8|mp4|mkv|webm)(?:\?[^\s"'<>]*)?/gi;
+  while ((m = mediaRe.exec(html))) addMedia(media, m[0], null, pageUrl);
+  return { media: media, players: players, iframes: iframes, embeds: embeds, scripts: scripts, dataUrls: dataUrls };
 }
 
-function getStreams(tmdbId,mediaType,season,episode) {
-  return runProvider('cinewave','https://cinewave.org.lk',tmdbId,mediaType,season,episode).then(function(r){
-    if(r.streams.length) return r.streams;
-    return visible('cinewave',r.report);
-  }).catch(function(e){return visible('cinewave',['FATAL='+e.message]);});
+function candidates(id, type, season, episode) {
+  var b = BASE_URL.replace(/\/$/, ""), x = encodeURIComponent(String(id));
+  if (type === "movie") return [b + "/movie/" + x, b + "/movies/" + x, b + "/watch/movie/" + x, b + "/watch/" + x];
+  var s = Number(season), e = Number(episode);
+  return [b + "/tv/" + x + "/" + s + "/" + e, b + "/tv/" + x + "?season=" + s + "&episode=" + e, b + "/watch/tv/" + x + "/" + s + "/" + e, b + "/watch/" + x + "/" + s + "/" + e];
 }
-module.exports={getStreams:getStreams};
+
+function getStreams(tmdbId, mediaType, season, episode) {
+  var report = [];
+  if (!tmdbId) return Promise.resolve([diag("missing TMDB id", 1)]);
+  var urls = candidates(tmdbId, mediaType, season, episode);
+  report.push("BASE=" + BASE_URL);
+  report.push("CANDIDATES=" + urls.length);
+  return urls.reduce(function (p, url, i) {
+    return p.then(function (streams) {
+      if (streams.length) return streams;
+      return fetchText(url, BASE_URL + "/").then(function (r) {
+        var x = inspect(r.text, url);
+        report.push("C" + (i + 1) + " HTTP=" + r.status + " HTML=" + r.text.length + " IFRAME=" + x.iframes + " EMBED=" + x.embeds + " SCRIPTS=" + x.scripts + " DATAURL=" + x.dataUrls + " MEDIA=" + x.media.length + " PLAYERS=" + x.players.length);
+        if (x.media.length) return x.media;
+        if (!x.players.length) return [];
+        report.push("C" + (i + 1) + " PLAYER_URLS=" + x.players.length);
+        return x.players.slice(0, 4).reduce(function (q, playerUrl, pi) {
+          return q.then(function (found) {
+            if (found.length) return found;
+            return fetchText(playerUrl, url).then(function (pr) {
+              var px = inspect(pr.text, playerUrl);
+              report.push("P" + (pi + 1) + " HTTP=" + pr.status + " HTML=" + pr.text.length + " IFRAME=" + px.iframes + " EMBED=" + px.embeds + " MEDIA=" + px.media.length);
+              return px.media;
+            }).catch(function (e) { report.push("P" + (pi + 1) + " ERROR=" + String(e && e.message || e)); return []; });
+          });
+        }, Promise.resolve([]));
+      }).catch(function (e) { report.push("C" + (i + 1) + " ERROR=" + String(e && e.message || e)); return []; });
+    });
+  }, Promise.resolve([])).then(function (streams) {
+    if (streams.length) return streams;
+    report.push("RESULT=ZERO_STREAMS");
+    return visible(report);
+  }).catch(function (e) { report.push("FATAL=" + String(e && e.message || e)); return visible(report); });
+}
+
+module.exports = { getStreams: getStreams };
