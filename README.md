@@ -17,3 +17,7 @@ The scraper performs two stages:
 2. fetch discovered player/embed URLs and scan for directly exposed media URLs.
 
 It does not attempt DRM, CAPTCHA, authentication, or anti-bot bypasses.
+
+
+## v4.0.0 diagnostics
+This build additionally scans inline JavaScript for player/embed/source URLs and common keys such as `file`, `source`, `stream`, `video`, `hls`, and `embed`. It only follows URLs exposed in the page/player HTML or JavaScript; it does not bypass DRM, CAPTCHA, authentication, or access controls.

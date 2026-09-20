@@ -1,13 +1,13 @@
 {
   "name": "RetroidPocketFive Cine Sources",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "description": "Direct-scraper Nuvio providers for CineJoy and CineWave with Android-visible diagnostics.",
   "scrapers": [
     {
       "id": "cinejoy",
       "name": "CineJoy Direct",
       "description": "Direct HTML/player discovery for an authorized/public CineJoy source.",
-      "version": "3.0.0",
+      "version": "4.0.0",
       "author": "RetroidPocketFive",
       "supportedTypes": ["movie", "tv"],
       "filename": "providers/cinejoy.js",
@@ -20,7 +20,7 @@
       "id": "cinewave",
       "name": "CineWave Direct",
       "description": "Direct HTML/player discovery for an authorized/public CineWave source.",
-      "version": "3.0.0",
+      "version": "4.0.0",
       "author": "RetroidPocketFive",
       "supportedTypes": ["movie", "tv"],
       "filename": "providers/cinewave.js",
