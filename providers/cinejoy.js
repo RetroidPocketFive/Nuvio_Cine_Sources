@@ -1,5 +1,5 @@
 var PROVIDER = "cinejoy";
-var BASE_URL = "https://cinejoy.org.lk";
+var BASE_URL = "https://cinejoy.stream";
 var DEBUG_URL = "https://example.com/";
 var UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128 Safari/537.36";
 
@@ -8,22 +8,45 @@ function diag(text, n) {
   if (s.length > 180) s = s.slice(0, 177) + "...";
   return { name: PROVIDER + " [" + n + "] " + s, title: "Debug", url: DEBUG_URL, quality: "Debug" };
 }
-
-function visible(report) {
-  return report.map(function (x, i) { return diag(x, i + 1); });
-}
+function visible(report) { return report.map(function (x, i) { return diag(x, i + 1); }); }
 
 function fetchText(url, referer) {
-  return fetch(url, { headers: { "User-Agent": UA, "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.8", "Referer": referer || BASE_URL + "/" }, redirect: "follow" }).then(function (r) {
+  return fetch(url, {
+    headers: {
+      "User-Agent": UA,
+      "Accept": "text/html,application/xhtml+xml,application/javascript,text/javascript,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.8",
+      "Referer": referer || BASE_URL + "/"
+    },
+    redirect: "follow"
+  }).then(function (r) {
     if (!r || !r.ok) throw new Error("HTTP " + (r && r.status !== undefined ? r.status : "unknown"));
-    return r.text().then(function (t) { return { status: r.status, text: t }; });
+    return r.text().then(function (t) { return { status: r.status, text: t, url: url }; });
   });
 }
 
 function abs(v, base) {
   if (!v) return null;
-  var s = String(v).replace(/&amp;/g, "&").replace(/\\u0026/g, "&").trim();
+  var s = String(v)
+    .replace(/&amp;/g, "&")
+    .replace(/\\u0026/gi, "&")
+    .replace(/\\\//g, "/")
+    .replace(/&quot;/g, "\"")
+    .trim();
   try { return new URL(s, base).toString(); } catch (_) { return null; }
+}
+
+function normalizeScript(s) {
+  return String(s || "")
+    .replace(/\\u002f/gi, "/")
+    .replace(/\\u0026/gi, "&")
+    .replace(/\\u003a/gi, ":")
+    .replace(/\\u003d/gi, "=")
+    .replace(/\\u0022/gi, '"')
+    .replace(/\\u0027/gi, "'")
+    .replace(/\\\//g, "/")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"');
 }
 
 function quality(s) {
@@ -35,6 +58,8 @@ function quality(s) {
   if (/480/.test(s)) return "480p";
   return "Unknown";
 }
+
+function addUnique(arr, value) { if (value && arr.indexOf(value) < 0) arr.push(value); }
 
 function addMedia(out, url, label, pageUrl) {
   var u = abs(url, pageUrl);
@@ -51,27 +76,74 @@ function attr(tag, name) {
 }
 
 function inspect(html, pageUrl) {
-  var media = [], players = [], iframes = 0, embeds = 0, scripts = 0, dataUrls = 0;
+  var media = [], players = [], scripts = [], scriptBlocks = [], iframes = 0, embeds = 0, dataUrls = 0, scriptMediaHits = 0, scriptPlayerHits = 0;
   var m, tag;
+
   var tagRe = /<(iframe|embed)\b[^>]*>/gi;
   while ((m = tagRe.exec(html))) {
     tag = m[0];
     var src = attr(tag, "src") || attr(tag, "data-src") || attr(tag, "data-url") || attr(tag, "data-embed") || attr(tag, "data-video");
     if (m[1].toLowerCase() === "iframe") iframes++; else embeds++;
-    if (src) { var u = abs(src, pageUrl); if (u && players.indexOf(u) < 0) players.push(u); }
+    if (src) { var u = abs(src, pageUrl); if (u) addUnique(players, u); }
   }
+
   var videoRe = /<(video|source)\b[^>]*>/gi;
   while ((m = videoRe.exec(html))) {
     tag = m[0];
     var v = attr(tag, "src") || attr(tag, "data-src") || attr(tag, "data-video") || attr(tag, "data-url");
     if (v) addMedia(media, v, attr(tag, "title") || attr(tag, "label") || attr(tag, "data-quality"), pageUrl);
   }
-  var scriptRe = /<script\b[^>]*>/gi; while (scriptRe.exec(html)) scripts++;
-  var dataRe = /(?:data-(?:url|video|src|embed)|playerUrl|embedUrl|videoUrl|streamUrl)\s*[:=]\s*["']([^"']+)["']/gi;
-  while ((m = dataRe.exec(html))) { dataUrls++; var du = abs(m[1], pageUrl); if (du && players.indexOf(du) < 0) players.push(du); }
-  var mediaRe = /https?:\/\/[^\s"'<>]+\.(?:m3u8|mp4|mkv|webm)(?:\?[^\s"'<>]*)?/gi;
-  while ((m = mediaRe.exec(html))) addMedia(media, m[0], null, pageUrl);
-  return { media: media, players: players, iframes: iframes, embeds: embeds, scripts: scripts, dataUrls: dataUrls };
+
+  var scriptRe = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+  while ((m = scriptRe.exec(html))) {
+    var attrs = m[1] || "";
+    var body = m[2] || "";
+    scripts.push(body);
+    var srcAttr = attr("<script " + attrs + ">", "src");
+    if (srcAttr) addUnique(scriptBlocks, abs(srcAttr, pageUrl));
+
+    var normalized = normalizeScript(body);
+    var before = media.length;
+    var mediaRe = /https?:\/\/[^\s"'<>]+\.(?:m3u8|mp4|mkv|webm)(?:\?[^\s"'<>]*)?/gi;
+    var mm;
+    while ((mm = mediaRe.exec(normalized))) addMedia(media, mm[0], null, pageUrl);
+    if (media.length > before) scriptMediaHits += media.length - before;
+
+    var playerKeyRe = /(?:player(?:Url|URL)?|embed(?:Url|URL)?|iframe(?:Url|URL)?|video(?:Url|URL)?|stream(?:Url|URL)?|source(?:Url|URL)?)\s*[:=]\s*["']([^"']+)["']/gi;
+    while ((mm = playerKeyRe.exec(normalized))) {
+      var pu = abs(mm[1], pageUrl);
+      if (pu) { addUnique(players, pu); scriptPlayerHits++; }
+    }
+
+    var quotedUrlRe = /["'](https?:\/\/[^"'\s<>]+)["']/gi;
+    while ((mm = quotedUrlRe.exec(normalized))) {
+      var qu = mm[1];
+      if (/\.(?:m3u8|mp4|mkv|webm)(?:[?#]|$)/i.test(qu)) addMedia(media, qu, null, pageUrl);
+      else if (/(?:player|embed|iframe|video|stream|source|watch)/i.test(qu)) addUnique(players, qu);
+    }
+  }
+
+  var dataRe = /(?:data-(?:url|video|src|embed)|playerUrl|embedUrl|videoUrl|streamUrl)\\s*[:=]\\s*["']([^"']+)["']/gi;
+  while ((m = dataRe.exec(html))) {
+    dataUrls++;
+    var du = abs(m[1], pageUrl);
+    if (du) addUnique(players, du);
+  }
+
+  var mediaReHtml = /https?:\/\/[^\s"'<>]+\.(?:m3u8|mp4|mkv|webm)(?:\?[^\s"'<>]*)?/gi;
+  while ((m = mediaReHtml.exec(normalizeScript(html)))) addMedia(media, m[0], null, pageUrl);
+
+  return {
+    media: media,
+    players: players,
+    scriptBlocks: scriptBlocks,
+    scripts: scripts.length,
+    scriptMediaHits: scriptMediaHits,
+    scriptPlayerHits: scriptPlayerHits,
+    iframes: iframes,
+    embeds: embeds,
+    dataUrls: dataUrls
+  };
 }
 
 function candidates(id, type, season, episode) {
@@ -87,32 +159,50 @@ function getStreams(tmdbId, mediaType, season, episode) {
   var urls = candidates(tmdbId, mediaType, season, episode);
   report.push("BASE=" + BASE_URL);
   report.push("CANDIDATES=" + urls.length);
+
   return urls.reduce(function (p, url, i) {
     return p.then(function (streams) {
       if (streams.length) return streams;
       return fetchText(url, BASE_URL + "/").then(function (r) {
         var x = inspect(r.text, url);
         report.push("C" + (i + 1) + " HTTP=" + r.status + " HTML=" + r.text.length + " IFRAME=" + x.iframes + " EMBED=" + x.embeds + " SCRIPTS=" + x.scripts + " DATAURL=" + x.dataUrls + " MEDIA=" + x.media.length + " PLAYERS=" + x.players.length);
+        report.push("C" + (i + 1) + " SCRIPT_MEDIA=" + x.scriptMediaHits + " SCRIPT_PLAYERS=" + x.scriptPlayerHits + " EXT_SCRIPTS=" + x.scriptBlocks.length);
         if (x.media.length) return x.media;
-        if (!x.players.length) return [];
-        report.push("C" + (i + 1) + " PLAYER_URLS=" + x.players.length);
-        return x.players.slice(0, 4).reduce(function (q, playerUrl, pi) {
+
+        var playerUrls = x.players.slice(0, 6);
+        var externalScripts = x.scriptBlocks.slice(0, 6);
+        report.push("C" + (i + 1) + " SCAN_TARGETS=" + (playerUrls.length + externalScripts.length));
+
+        var targets = [];
+        playerUrls.forEach(function (u) { targets.push({ kind: "PLAYER", url: u }); });
+        externalScripts.forEach(function (u) { targets.push({ kind: "SCRIPT", url: u }); });
+
+        return targets.reduce(function (q, target, ti) {
           return q.then(function (found) {
             if (found.length) return found;
-            return fetchText(playerUrl, url).then(function (pr) {
-              var px = inspect(pr.text, playerUrl);
-              report.push("P" + (pi + 1) + " HTTP=" + pr.status + " HTML=" + pr.text.length + " IFRAME=" + px.iframes + " EMBED=" + px.embeds + " MEDIA=" + px.media.length);
-              return px.media;
-            }).catch(function (e) { report.push("P" + (pi + 1) + " ERROR=" + String(e && e.message || e)); return []; });
+            return fetchText(target.url, url).then(function (tr) {
+              var tx = inspect(tr.text, target.url);
+              report.push(target.kind + (ti + 1) + " HTTP=" + tr.status + " LEN=" + tr.text.length + " MEDIA=" + tx.media.length + " PLAYERS=" + tx.players.length + " SCRIPTS=" + tx.scripts);
+              return tx.media;
+            }).catch(function (e) {
+              report.push(target.kind + (ti + 1) + " ERROR=" + String(e && e.message || e));
+              return [];
+            });
           });
         }, Promise.resolve([]));
-      }).catch(function (e) { report.push("C" + (i + 1) + " ERROR=" + String(e && e.message || e)); return []; });
+      }).catch(function (e) {
+        report.push("C" + (i + 1) + " ERROR=" + String(e && e.message || e));
+        return [];
+      });
     });
   }, Promise.resolve([])).then(function (streams) {
     if (streams.length) return streams;
     report.push("RESULT=ZERO_STREAMS");
     return visible(report);
-  }).catch(function (e) { report.push("FATAL=" + String(e && e.message || e)); return visible(report); });
+  }).catch(function (e) {
+    report.push("FATAL=" + String(e && e.message || e));
+    return visible(report);
+  });
 }
 
 module.exports = { getStreams: getStreams };
