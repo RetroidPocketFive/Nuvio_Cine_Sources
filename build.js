@@ -1,9 +1,1 @@
-const fs = require('fs');
-const path = require('path');
-for (const name of ['cinejoy','cinewave']) {
-  const src = path.join('src', name, 'index.js');
-  const dst = path.join('providers', name + '.js');
-  fs.mkdirSync('providers', {recursive:true});
-  fs.copyFileSync(src, dst);
-  console.log('built ' + dst);
-}
+const fs=require("fs"); fs.mkdirSync("providers",{recursive:true}); for(const n of ["cinejoy","cinewave"]) { fs.copyFileSync(`src/${n}/index.js`,`providers/${n}.js`); console.log("built providers/"+n+".js"); }

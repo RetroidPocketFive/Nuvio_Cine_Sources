@@ -1,32 +1,52 @@
 {
   "name": "RetroidPocketFive Cine Sources",
-  "version": "5.0.0",
-  "description": "Direct CineJoy and CineWave scrapers with JavaScript player/config discovery diagnostics.",
+  "version": "6.0.0",
+  "description": "Direct CineJoy and CineWave providers with recursive player/script/API discovery.",
   "scrapers": [
     {
       "id": "cinejoy",
       "name": "CineJoy Direct",
-      "description": "CineJoy direct HTML/player discovery scraper",
-      "version": "5.0.0",
+      "description": "Direct page/player/script/API discovery for CineJoy.",
+      "version": "6.0.0",
       "author": "RetroidPocketFive",
-      "supportedTypes": ["movie", "tv"],
+      "supportedTypes": [
+        "movie",
+        "tv"
+      ],
       "filename": "providers/cinejoy.js",
       "enabled": true,
-      "formats": ["mp4", "m3u8", "mkv", "webm"],
-      "contentLanguage": ["en"],
+      "formats": [
+        "mp4",
+        "m3u8",
+        "mkv",
+        "webm"
+      ],
+      "contentLanguage": [
+        "en"
+      ],
       "supportsExternalPlayer": true
     },
     {
       "id": "cinewave",
       "name": "CineWave Direct",
-      "description": "CineWave direct HTML/player discovery scraper",
-      "version": "5.0.0",
+      "description": "Direct page/player/script/API discovery for CineWave.",
+      "version": "6.0.0",
       "author": "RetroidPocketFive",
-      "supportedTypes": ["movie", "tv"],
+      "supportedTypes": [
+        "movie",
+        "tv"
+      ],
       "filename": "providers/cinewave.js",
       "enabled": true,
-      "formats": ["mp4", "m3u8", "mkv", "webm"],
-      "contentLanguage": ["en"],
+      "formats": [
+        "mp4",
+        "m3u8",
+        "mkv",
+        "webm"
+      ],
+      "contentLanguage": [
+        "en"
+      ],
       "supportsExternalPlayer": true
     }
   ]
