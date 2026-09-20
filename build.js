@@ -1,7 +1,9 @@
-const fs=require('fs');
-for(const n of ['cinejoy','cinewave']){
-  const src='src/'+n+'/index.js', out='providers/'+n+'.js';
-  if(!fs.existsSync(src)) throw new Error('Missing '+src);
-  fs.copyFileSync(src,out);
-  console.log('built '+out);
+const fs = require('fs');
+const path = require('path');
+for (const name of ['cinejoy','cinewave']) {
+  const src = path.join('src', name, 'index.js');
+  const dst = path.join('providers', name + '.js');
+  fs.mkdirSync('providers', {recursive:true});
+  fs.copyFileSync(src, dst);
+  console.log('built ' + dst);
 }

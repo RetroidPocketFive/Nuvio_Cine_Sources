@@ -1,23 +1,33 @@
-# RetroidPocketFive Cine Sources 3.0.0
+# RetroidPocketFive Cine Sources v5.0.0
 
-Direct-scraper Nuvio providers for CineJoy and CineWave.
+Nuvio providers for CineJoy and CineWave.
 
-## Important
-The manifest uses Nuvio's current `scrapers` registry format. Each scraper points to a generated file under `providers/`.
+## v5 changes
 
-The providers use Promise-based JavaScript for compatibility with Nuvio's dynamically loaded runtime.
+- Parses the contents of inline `<script>...</script>` blocks instead of only counting script tags.
+- Detects direct media URLs in JavaScript, including escaped slash/Unicode forms.
+- Detects player/embed/video/stream/source URL configuration inside scripts.
+- Detects external `<script src="...">` files and inspects a limited number of them.
+- Inspects discovered player URLs and external scripts for further media/player URLs.
+- Keeps visible diagnostic entries when no playable stream is found.
+- Uses Promise chains for Hermes-compatible plugin execution.
 
-## Android diagnostic mode
-When no playable media URL is found, the provider returns visible `Debug` entries. These are diagnostic only and use `https://example.com/` as a non-playable placeholder.
+## Install
 
-For CineWave, the known working candidate from prior testing is `https://cinewave.org.lk/movies/<TMDB ID>` among the generated candidates.
+Publish these files to the GitHub repository and add the raw `manifest.json` URL to Nuvio. Do not add the ZIP itself as the repository URL.
 
-The scraper performs two stages:
-1. fetch title page and detect directly exposed media or player/embed URLs;
-2. fetch discovered player/embed URLs and scan for directly exposed media URLs.
+Example raw manifest URL:
+`https://raw.githubusercontent.com/RetroidPocketFive/Nuvio_Cine_Sources/refs/heads/main/manifest.json`
 
-It does not attempt DRM, CAPTCHA, authentication, or anti-bot bypasses.
+## Diagnostics
 
+For CineWave, a successful page fetch should now show entries such as:
 
-## v4.0.0 diagnostics
-This build additionally scans inline JavaScript for player/embed/source URLs and common keys such as `file`, `source`, `stream`, `video`, `hls`, and `embed`. It only follows URLs exposed in the page/player HTML or JavaScript; it does not bypass DRM, CAPTCHA, authentication, or access controls.
+- `SCRIPT_MEDIA=n`
+- `SCRIPT_PLAYERS=n`
+- `EXT_SCRIPTS=n`
+- `SCAN_TARGETS=n`
+
+If a script or player contains a directly exposed `.m3u8`, `.mp4`, `.mkv`, or `.webm` URL, the provider returns it as a Nuvio stream.
+
+This scraper does not attempt to bypass DRM, CAPTCHA, login requirements, or anti-bot/access controls.
