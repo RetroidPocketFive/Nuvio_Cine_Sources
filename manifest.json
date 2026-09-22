@@ -1,13 +1,13 @@
 {
   "name": "RetroidPocketFive Cine Sources",
-  "version": "6.0.0",
-  "description": "Direct CineJoy and CineWave providers with recursive player/script/API discovery.",
+  "version": "7.0.0",
+  "description": "CineWave watch.cinewave.qzz.io/play URL tracing with page, script, JSON, Next.js and endpoint discovery.",
   "scrapers": [
     {
       "id": "cinejoy",
       "name": "CineJoy Direct",
       "description": "Direct page/player/script/API discovery for CineJoy.",
-      "version": "6.0.0",
+      "version": "7.0.0",
       "author": "RetroidPocketFive",
       "supportedTypes": [
         "movie",
@@ -29,8 +29,8 @@
     {
       "id": "cinewave",
       "name": "CineWave Direct",
-      "description": "Direct page/player/script/API discovery for CineWave.",
-      "version": "6.0.0",
+      "description": "Targeted CineWave play URL tracing for watch.cinewave.qzz.io/play/... plus recursive page/script/API discovery.",
+      "version": "7.0.0",
       "author": "RetroidPocketFive",
       "supportedTypes": [
         "movie",
