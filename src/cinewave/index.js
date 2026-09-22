@@ -1,5 +1,6 @@
 var PROVIDER = "cinewave";
 var BASE_URL = "https://cinewave.org.lk";
+var PLAY_HOST = "https://watch.cinewave.qzz.io";
 var DEBUG_URL = "https://example.com/";
 var UA = "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/128 Mobile Safari/537.36";
 
@@ -7,6 +8,15 @@ function diag(text, n) {
   var s = String(text || "").replace(/\s+/g, " ").trim();
   if (s.length > 180) s = s.slice(0, 177) + "...";
   return { name: PROVIDER + " [" + n + "] " + s, title: "Debug", url: DEBUG_URL, quality: "Debug" };
+}
+function playerDiag(url, n) {
+  return {
+    name: PROVIDER + " [PLAY " + n + "] " + url,
+    title: "CineWave PLAY URL",
+    url: url,
+    quality: "Player",
+    headers: { Referer: BASE_URL + "/", "User-Agent": UA }
+  };
 }
 function visible(report) { return report.map(function (x, i) { return diag(x, i + 1); }); }
 
@@ -21,29 +31,27 @@ function fetchText(url, referer) {
     redirect: "follow"
   }).then(function (r) {
     if (!r || !r.ok) throw new Error("HTTP " + (r && r.status !== undefined ? r.status : "unknown"));
-    return r.text().then(function (t) { return { status: r.status, text: t, url: url }; });
+    return r.text().then(function (t) { return { status: r.status, text: t, url: r.url || url }; });
   });
 }
 
 function abs(v, base) {
   if (!v) return null;
-  var s = String(v)
-    .replace(/&amp;/g, "&")
-    .replace(/\\u0026/gi, "&")
-    .replace(/\\u002f/gi, "/")
-    .replace(/\\u002F/gi, "/")
-    .replace(/\\\//g, "/")
-    .replace(/&quot;/g, "\"")
-    .trim();
+  var s = norm(v).trim();
   try { return new URL(s, base).toString(); } catch (_) { return null; }
 }
 
 function norm(s) {
-  return String(s || "")
-    .replace(/\\u002f/gi, "/").replace(/\\u0026/gi, "&")
-    .replace(/\\u003a/gi, ":").replace(/\\u003d/gi, "=")
-    .replace(/\\u0022/gi, '"').replace(/\\u0027/gi, "'")
-    .replace(/\\\//g, "/").replace(/&amp;/g, "&").replace(/&quot;/g, '"');
+  var x = String(s || "");
+  for (var i = 0; i < 2; i++) {
+    x = x
+      .replace(/\\u002f/gi, "/").replace(/\\u0026/gi, "&")
+      .replace(/\\u003a/gi, ":").replace(/\\u003d/gi, "=")
+      .replace(/\\u0022/gi, '"').replace(/\\u0027/gi, "'")
+      .replace(/\\\//g, "/").replace(/&amp;/g, "&").replace(/&quot;/g, '"');
+  }
+  try { x = decodeURIComponent(x); } catch (_) {}
+  return x;
 }
 
 function addUnique(arr, v) { if (v && arr.indexOf(v) < 0) arr.push(v); }
@@ -77,10 +85,30 @@ function attr(tag, name) {
   return r ? r[1] : null;
 }
 
+function extractPlayUrls(text, base) {
+  var out = [], s = norm(text), m;
+  // Exact target requested: https://watch.cinewave.qzz.io/play/<token>
+  var exact = /https?:\/\/watch\.cinewave\.qzz\.io\/play\/[A-Za-z0-9_-]+/gi;
+  while ((m = exact.exec(s))) addUnique(out, m[0]);
+
+  // Same target when written as //host/play/... or with the host/path URL-encoded.
+  var protocolRelative = /(?:^|["'`(\s])\/\/watch\.cinewave\.qzz\.io\/play\/[A-Za-z0-9_-]+/gi;
+  while ((m = protocolRelative.exec(s))) addUnique(out, "https:" + m[0].replace(/^[^\/]*\/?/, ""));
+
+  // Relative /play/<token> is only accepted when the inspected document is the watch host.
+  if (/^https?:\/\/watch\.cinewave\.qzz\.io\//i.test(base)) {
+    var rel = /(?:^|["'`(\s])\/play\/[A-Za-z0-9_-]+/gi;
+    while ((m = rel.exec(s))) addUnique(out, abs(m[0].trim(), base));
+  }
+  return out;
+}
+
 function inspect(html, pageUrl) {
-  var media = [], players = [], scripts = [], externalScripts = [], endpoints = [];
+  var media = [], players = [], scripts = [], externalScripts = [], endpoints = [], playUrls = [];
   var iframes = 0, embeds = 0, scriptMediaHits = 0, scriptPlayerHits = 0;
   var m, tag;
+
+  extractPlayUrls(html, pageUrl).forEach(function (u) { addUnique(playUrls, u); addUnique(players, u); });
 
   var tagRe = /<(iframe|embed)\b[^>]*>/gi;
   while ((m = tagRe.exec(html))) {
@@ -109,8 +137,9 @@ function inspect(html, pageUrl) {
     }
 
     var s = norm(body);
-    var before = media.length;
-    var mm;
+    extractPlayUrls(s, pageUrl).forEach(function (u) { addUnique(playUrls, u); addUnique(players, u); });
+
+    var before = media.length, mm;
     var mediaRe = /https?:\/\/[^\s"'<>\\]+?\.(?:m3u8|mp4|mkv|webm)(?:\?[^\s"'<>\\]*)?/gi;
     while ((mm = mediaRe.exec(s))) addMedia(media, mm[0], null, pageUrl);
     if (media.length > before) scriptMediaHits += media.length - before;
@@ -128,8 +157,6 @@ function inspect(html, pageUrl) {
       else if (/(?:player|embed|iframe|video|stream|source|watch)/i.test(qu)) addUnique(players, qu);
     }
 
-    // API/XHR/fetch/JSON endpoint discovery. This is ordinary page-data inspection,
-    // not an attempt to bypass authentication, DRM, CAPTCHA, or access controls.
     var callRe = /(?:fetch|axios\.(?:get|post)|XMLHttpRequest|open)\s*\(\s*["'`]([^"'`]+)["'`]/gi;
     while ((mm = callRe.exec(s))) {
       var eu = abs(mm[1], pageUrl);
@@ -146,14 +173,29 @@ function inspect(html, pageUrl) {
     }
   }
 
+  var raw = norm(html);
   var rawMedia = /https?:\/\/[^\s"'<>\\]+?\.(?:m3u8|mp4|mkv|webm)(?:\?[^\s"'<>\\]*)?/gi;
-  while ((m = rawMedia.exec(norm(html)))) addMedia(media, m[0], null, pageUrl);
+  while ((m = rawMedia.exec(raw))) addMedia(media, m[0], null, pageUrl);
+
+  // Next.js data and generic JSON blobs are scanned separately so the diagnostic
+  // shows whether the play URL is present in serialized page data rather than JS.
+  var jsonBlobs = 0;
+  var nextData = /<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i.exec(html);
+  if (nextData) {
+    jsonBlobs++;
+    extractPlayUrls(nextData[1], pageUrl).forEach(function (u) { addUnique(playUrls, u); addUnique(players, u); });
+  }
+  var nextFlight = /self\.__next_f\.push\(\[1,["']([\s\S]*?)["']\]\)/gi;
+  while ((m = nextFlight.exec(html))) {
+    jsonBlobs++;
+    extractPlayUrls(m[1], pageUrl).forEach(function (u) { addUnique(playUrls, u); addUnique(players, u); });
+  }
 
   return {
-    media: media, players: players, scripts: scripts.length,
+    media: media, players: players, playUrls: playUrls, scripts: scripts.length,
     externalScripts: externalScripts, endpoints: endpoints,
     scriptMediaHits: scriptMediaHits, scriptPlayerHits: scriptPlayerHits,
-    iframes: iframes, embeds: embeds
+    iframes: iframes, embeds: embeds, jsonBlobs: jsonBlobs
   };
 }
 
@@ -164,76 +206,92 @@ function candidates(id, type, season, episode) {
   return [b + "/tv/" + x + "/" + s + "/" + e, b + "/tv/" + x + "?season=" + s + "&episode=" + e, b + "/watch/tv/" + x + "/" + s + "/" + e, b + "/watch/" + x + "/" + s + "/" + e];
 }
 
+function fetchAndInspect(url, referer, report) {
+  return fetchText(url, referer).then(function (r) {
+    var x = inspect(r.text, r.url || url);
+    return { response: r, info: x };
+  });
+}
+
 function getStreams(tmdbId, mediaType, season, episode) {
-  var report = [];
+  var report = [], foundPlay = [];
   if (!tmdbId) return Promise.resolve([diag("missing TMDB id", 1)]);
   var urls = candidates(tmdbId, mediaType, season, episode);
+  report.push("V7_TARGET=watch.cinewave.qzz.io/play/<token>");
   report.push("BASE=" + BASE_URL);
   report.push("CANDIDATES=" + urls.length);
 
   return urls.reduce(function (p, url, i) {
-    return p.then(function (streams) {
-      if (streams.length) return streams;
-      return fetchText(url, BASE_URL + "/").then(function (r) {
-        var x = inspect(r.text, url);
-        report.push("C" + (i + 1) + " HTTP=" + r.status + " HTML=" + r.text.length +
-          " IFRAME=" + x.iframes + " EMBED=" + x.embeds + " SCRIPTS=" + x.scripts +
-          " MEDIA=" + x.media.length + " PLAYERS=" + x.players.length);
+    return p.then(function (state) {
+      if (state.media.length || state.play.length) return state;
+      return fetchAndInspect(url, BASE_URL + "/", report).then(function (z) {
+        var r = z.response, x = z.info;
+        report.push("C" + (i + 1) + " HTTP=" + r.status + " FINAL=" + (r.url || url));
+        report.push("C" + (i + 1) + " HTML=" + r.text.length + " IFRAME=" + x.iframes +
+          " EMBED=" + x.embeds + " SCRIPTS=" + x.scripts + " MEDIA=" + x.media.length +
+          " PLAYERS=" + x.players.length + " PLAYURLS=" + x.playUrls.length + " JSON=" + x.jsonBlobs);
         report.push("C" + (i + 1) + " SCRIPT_MEDIA=" + x.scriptMediaHits +
           " SCRIPT_PLAYERS=" + x.scriptPlayerHits + " EXT_SCRIPTS=" + x.externalScripts.length +
           " ENDPOINTS=" + x.endpoints.length);
 
-        if (x.media.length) return x.media;
-
-        // Inspect all discovered external scripts, not just the first six.
-        var scriptTargets = x.externalScripts.slice(0, 12);
-        var playerTargets = x.players.slice(0, 8);
-        var endpointTargets = x.endpoints.slice(0, 12);
-        report.push("C" + (i + 1) + " TARGETS=" +
-          (scriptTargets.length + playerTargets.length + endpointTargets.length));
+        x.playUrls.forEach(function (u) { addUnique(foundPlay, u); });
+        if (x.media.length || foundPlay.length) return { media: x.media, play: foundPlay };
 
         var targets = [];
-        scriptTargets.forEach(function (u) { targets.push({ kind: "SCRIPT", url: u }); });
-        playerTargets.forEach(function (u) { targets.push({ kind: "PLAYER", url: u }); });
-        endpointTargets.forEach(function (u) { targets.push({ kind: "API", url: u }); });
+        x.externalScripts.slice(0, 20).forEach(function (u) { targets.push({ kind: "SCRIPT", url: u }); });
+        x.players.slice(0, 12).forEach(function (u) {
+          if (!/^https?:\/\/watch\.cinewave\.qzz\.io\/play\//i.test(u)) targets.push({ kind: "PLAYER", url: u });
+        });
+        x.endpoints.slice(0, 20).forEach(function (u) { targets.push({ kind: "API", url: u }); });
+        report.push("C" + (i + 1) + " TRACE_TARGETS=" + targets.length);
 
         return targets.reduce(function (q, target, ti) {
-          return q.then(function (found) {
-            if (found.length) return found;
-            return fetchText(target.url, url).then(function (tr) {
-              var tx = inspect(tr.text, target.url);
-              report.push(target.kind + (ti + 1) + " HTTP=" + tr.status +
-                " LEN=" + tr.text.length + " MEDIA=" + tx.media.length +
-                " PLAYERS=" + tx.players.length + " SCRIPTS=" + tx.scripts +
+          return q.then(function (st) {
+            if (st.media.length || st.play.length) return st;
+            return fetchAndInspect(target.url, url, report).then(function (tz) {
+              var tx = tz.info;
+              report.push(target.kind + (ti + 1) + " HTTP=" + tz.response.status +
+                " LEN=" + tz.response.text.length + " PLAYURLS=" + tx.playUrls.length +
+                " MEDIA=" + tx.media.length + " PLAYERS=" + tx.players.length +
                 " EXT=" + tx.externalScripts.length + " API=" + tx.endpoints.length);
-              // One level of nested-script recursion.
-              var nested = tx.externalScripts.slice(0, 8);
+              tx.playUrls.forEach(function (u) { addUnique(foundPlay, u); });
+              if (tx.media.length || foundPlay.length) return { media: tx.media, play: foundPlay };
+
+              // One nested level for external scripts discovered inside chunks.
+              var nested = tx.externalScripts.slice(0, 10);
               return nested.reduce(function (qq, nu) {
-                return qq.then(function (f2) {
-                  if (f2.length) return f2;
-                  return fetchText(nu, target.url).then(function (nr) {
-                    var nx = inspect(nr.text, nu);
-                    report.push("NESTED HTTP=" + nr.status + " LEN=" + nr.text.length +
-                      " MEDIA=" + nx.media.length + " PLAYERS=" + nx.players.length +
-                      " API=" + nx.endpoints.length);
-                    return nx.media;
-                  }).catch(function () { return []; });
+                return qq.then(function (ns) {
+                  if (ns.media.length || ns.play.length) return ns;
+                  return fetchAndInspect(nu, target.url, report).then(function (nz) {
+                    var nx = nz.info;
+                    report.push("NESTED HTTP=" + nz.response.status + " LEN=" + nz.response.text.length +
+                      " PLAYURLS=" + nx.playUrls.length + " MEDIA=" + nx.media.length +
+                      " PLAYERS=" + nx.players.length + " API=" + nx.endpoints.length);
+                    nx.playUrls.forEach(function (u) { addUnique(foundPlay, u); });
+                    return { media: nx.media, play: foundPlay.slice() };
+                  }).catch(function () { return ns; });
                 });
-              }, Promise.resolve(tx.media));
+              }, Promise.resolve({ media: [], play: foundPlay.slice() }));
             }).catch(function (e) {
               report.push(target.kind + (ti + 1) + " ERROR=" + String(e && e.message || e));
-              return [];
+              return st;
             });
           });
-        }, Promise.resolve([]));
+        }, Promise.resolve({ media: [], play: foundPlay.slice() }));
       }).catch(function (e) {
         report.push("C" + (i + 1) + " ERROR=" + String(e && e.message || e));
-        return [];
+        return state;
       });
     });
-  }, Promise.resolve([])).then(function (streams) {
-    if (streams.length) return streams;
-    report.push("RESULT=ZERO_STREAMS");
+  }, Promise.resolve({ media: [], play: [] })).then(function (state) {
+    if (state.media.length) return state.media;
+    if (foundPlay.length) {
+      var out = foundPlay.map(function (u, i) { return playerDiag(u, i + 1); });
+      report.push("RESULT=PLAY_URLS_FOUND " + foundPlay.length);
+      report.push("PLAY0=" + foundPlay[0]);
+      return out.concat(visible(report));
+    }
+    report.push("RESULT=ZERO_PLAY_URLS");
     return visible(report);
   }).catch(function (e) {
     report.push("FATAL=" + String(e && e.message || e));
