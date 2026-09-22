@@ -1,45 +1,29 @@
 {
   "name": "RetroidPocketFive Cine Sources",
-  "version": "8.0.0",
-  "description": "Adds a CineSrc diagnostic provider using the documented TMDB embed structure, while retaining CineJoy and CineWave diagnostics.",
+  "version": "9.0.0",
+  "description": "CineSrc-only provider for Nuvio; CineJoy and CineWave removed.",
   "scrapers": [
     {
       "id": "cinesrc",
       "name": "CineSrc Diagnostic",
-      "description": "Tests CineSrc TMDB movie/TV embeds and traces iframe, script, player, endpoint, JSON, and direct media URLs.",
-      "version": "8.0.0",
+      "description": "CineSrc TMDB movie/TV embed diagnostic and source-discovery provider.",
+      "version": "9.0.0",
       "author": "RetroidPocketFive",
-      "supportedTypes": ["movie", "tv"],
+      "supportedTypes": [
+        "movie",
+        "tv"
+      ],
       "filename": "providers/cinesrc.js",
       "enabled": true,
-      "formats": ["mp4", "m3u8", "mkv", "webm"],
-      "contentLanguage": ["en"],
-      "supportsExternalPlayer": true
-    },
-    {
-      "id": "cinejoy",
-      "name": "CineJoy Direct",
-      "description": "Direct page/player/script/API discovery for CineJoy.",
-      "version": "8.0.0",
-      "author": "RetroidPocketFive",
-      "supportedTypes": ["movie", "tv"],
-      "filename": "providers/cinejoy.js",
-      "enabled": true,
-      "formats": ["mp4", "m3u8", "mkv", "webm"],
-      "contentLanguage": ["en"],
-      "supportsExternalPlayer": true
-    },
-    {
-      "id": "cinewave",
-      "name": "CineWave Direct",
-      "description": "Targeted CineWave play URL tracing for watch.cinewave.qzz.io/play/... plus recursive page/script/API discovery.",
-      "version": "8.0.0",
-      "author": "RetroidPocketFive",
-      "supportedTypes": ["movie", "tv"],
-      "filename": "providers/cinewave.js",
-      "enabled": true,
-      "formats": ["mp4", "m3u8", "mkv", "webm"],
-      "contentLanguage": ["en"],
+      "formats": [
+        "mp4",
+        "m3u8",
+        "mkv",
+        "webm"
+      ],
+      "contentLanguage": [
+        "en"
+      ],
       "supportsExternalPlayer": true
     }
   ]
