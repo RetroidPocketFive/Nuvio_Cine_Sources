@@ -27,7 +27,7 @@ function targets(id,type,season,episode){var x=encodeURIComponent(String(id));if
 function getStreams(tmdbId,mediaType,season,episode){
  if(!tmdbId)return Promise.resolve([diag("missing TMDB id",1)]);
  var report=[],out=[],pages=targets(tmdbId,mediaType,season,episode);
- report.push("V8_PROVIDER=CineSrc");report.push("TMDB="+tmdbId+" TYPE="+mediaType+(mediaType==="tv"?" S="+season+" E="+episode:""));report.push("TARGET="+pages[0]);
+ report.push("V9_PROVIDER=CineSrc");report.push("TMDB="+tmdbId+" TYPE="+mediaType+(mediaType==="tv"?" S="+season+" E="+episode:""));report.push("TARGET="+pages[0]);
  out.push({name:"CineSrc Embed",title:"CineSrc player",url:pages[0],quality:"Embed",headers:{Referer:BASE+"/","User-Agent":UA}});
  var chain=Promise.resolve();pages.forEach(function(p,i){chain=chain.then(function(){return fetchText(p,BASE+"/").then(function(r){var x=scan(r.text,r.url||p);report.push("PAGE"+(i+1)+" HTTP="+r.status+" LEN="+r.text.length+" IFRAME="+x.iframes+" EMBED="+x.embeds+" SCRIPTS="+x.scripts+" MEDIA="+x.media.length+" PLAYERS="+x.players.length+" EXT="+x.externalScripts.length+" ENDPOINTS="+x.endpoints.length);x.media.forEach(function(v){out.push(v)});x.players.slice(0,15).forEach(function(v,j){report.push("PLAYER"+j+"="+v)});x.endpoints.slice(0,15).forEach(function(v,j){report.push("ENDPOINT"+j+"="+v)});x.data.slice(0,10).forEach(function(v){report.push(v)});return x}).catch(function(e){report.push("PAGE"+(i+1)+" ERROR="+e.message)})})});
  return chain.then(function(){report.push("RESULT=MEDIA_"+out.filter(function(v){return v.quality!=="Embed"}).length);return out.concat(report.map(function(x,i){return diag(x,i+1)}))})
