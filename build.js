@@ -1,1 +1,6 @@
-const fs=require("fs"); fs.mkdirSync("providers",{recursive:true}); for(const n of ["cinejoy","cinewave"]) { fs.copyFileSync(`src/${n}/index.js`,`providers/${n}.js`); console.log("built providers/"+n+".js"); }
+const fs=require('fs');
+for(const p of ['cinesrc','cinejoy','cinewave']){
+ const s=`src/${p}/index.js`,d=`providers/${p}.js`;
+ if(fs.existsSync(s)) fs.copyFileSync(s,d);
+}
+console.log('providers synced');

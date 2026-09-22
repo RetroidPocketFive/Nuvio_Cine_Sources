@@ -1,5 +1,13 @@
-# RetroidPocketFive Cine Sources v6.0.0
+# RetroidPocketFive Nuvio Cine Sources — v8.0.0
 
-Two Nuvio scrapers for CineJoy and CineWave. v6 adds recursive inspection of external/nested scripts and discovery of ordinary API/AJAX/JSON/player endpoints exposed by the page. It does not bypass DRM, CAPTCHA, authentication, or access controls.
+Adds **CineSrc Diagnostic** based on CineSrc's documented TMDB embed URLs.
 
-Publish manifest.json and the providers/ directory to the repository, then add the raw manifest URL to Nuvio.
+Movie target:
+`https://cinesrc.st/embed/movie/{tmdb_id}`
+
+TV target:
+`https://cinesrc.st/embed/tv/{tmdb_id}?s={season}&e={episode}`
+
+The provider reports HTTP status, HTML size, iframe/embed counts, scripts, external scripts, direct media URLs, player URLs, endpoint-like URLs, and serialized JSON hints. It also exposes the documented CineSrc embed URL as a diagnostic stream so the Nuvio UI can confirm the target.
+
+It does not bypass DRM, CAPTCHA, authentication, or other access controls.
