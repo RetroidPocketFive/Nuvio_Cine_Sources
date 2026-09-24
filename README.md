@@ -1,16 +1,9 @@
-# RetroidPocketFive Cine Sources — v9.0.0
+# RetroidPocketFive Cine Sources v10.0.0
 
-CineSrc-only Nuvio provider. CineJoy and CineWave have been removed.
+CineSrc-only diagnostic provider.
 
-Provider:
-- CineSrc Diagnostic (`providers/cinesrc.js`)
+## v10 focus
+Tests the documented CineSrc movie/TV embed URL with several ordinary HTTP request variants (browser-like headers, Referer/Origin, Sec-Fetch headers, and cache-busting), reports status/final URL/content type/body prefix for errors, then scans successful responses for media/player/API clues.
 
-Movie target:
-- https://cinesrc.st/embed/movie/{tmdbId}
-
-TV target:
-- https://cinesrc.st/embed/tv/{tmdbId}?s={season}&e={episode}
-
-The provider currently exposes the CineSrc embed as a diagnostic stream and scans the returned HTML for direct media URLs, player URLs, endpoints, JSON data, and source/server IDs.
-
-Nuvio providers run locally in the app's JavaScript runtime; the manifest uses the `scrapers` registry format.
+Movie test: https://cinesrc.st/embed/movie/550
+TV pattern: https://cinesrc.st/embed/tv/{tmdb_id}?s={season}&e={episode}
