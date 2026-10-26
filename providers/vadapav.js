@@ -1,14 +1,10 @@
 /*
  * Vadapav Nuvio provider.
- * Searches both supported hostnames:
- *   https://vadapav.mov
- *   https://a.111477.xyz
- *
- * The two hosts are assumed to expose the same API routes; this still needs
- * testing in Nuvio. TMDB_API_KEY is currently required for title lookup.
+ * Searches both hosts; both hosts' API routes still need live verification.
+ * Resolves the TMDB ID by reading the public TMDB title page, so no API key
+ * is embedded in this public repository.
  */
 var BASES = ["https://vadapav.mov", "https://a.111477.xyz"];
-var TMDB_API_KEY = ""; // Add a TMDB API v3 key, or replace title lookup later.
 
 function getJson(url) {
   return fetch(url, {headers: {"Accept": "application/json"}}).then(function (r) {
@@ -16,19 +12,42 @@ function getJson(url) {
     return r.json();
   });
 }
+function getText(url) {
+  return fetch(url, {headers: {"Accept": "text/html"}}).then(function (r) {
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.text();
+  });
+}
+function decodeHtml(s) {
+  return String(s || "").replace(/&amp;/g, "&").replace(/&#39;|&apos;/g, "'")
+    .replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&#(\d+);/g, function (_, n) { return String.fromCharCode(Number(n)); });
+}
 function norm(s) {
   return String(s || "").toLowerCase()
     .replace(/\.(mkv|mp4|avi|mov|webm|m4v|m3u8)$/i, "")
     .replace(/[._]+/g, " ").replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
 }
 function getTitle(id, mediaType) {
-  if (!TMDB_API_KEY) return Promise.reject(new Error("TMDB_API_KEY is not configured"));
   var type = mediaType === "tv" ? "tv" : "movie";
-  return getJson("https://api.themoviedb.org/3/" + type + "/" + encodeURIComponent(String(id)) +
-    "?api_key=" + encodeURIComponent(TMDB_API_KEY)).then(function (d) {
-      return {title:d.title || d.name || "", original:d.original_title || d.original_name || "",
-        year:String((d.release_date || d.first_air_date || "").slice(0,4) || "")};
-    });
+  var url = "https://www.themoviedb.org/" + type + "/" + encodeURIComponent(String(id));
+  return getText(url).then(function (html) {
+    var title = "";
+    var patterns = [
+      /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)/i,
+      /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["']/i,
+      /<title[^>]*>([^<]+)/i
+    ];
+    for (var i = 0; i < patterns.length && !title; i++) {
+      var m = html.match(patterns[i]);
+      if (m && m[1]) title = decodeHtml(m[1]).trim();
+    }
+    title = title.replace(/\s*[-|–—:]\s*The Movie Database\s*\(TMDB\).*$/i, "").trim();
+    if (!title) throw new Error("Could not read title from TMDB page");
+    var yearMatch = html.match(/(?:release_date|first_air_date|release-date|first-air-date)[^>]{0,100}?((?:19|20)\d{2})/i);
+    if (!yearMatch) yearMatch = html.match(/\b((?:19|20)\d{2})\b/);
+    return {title:title, original:title, year:yearMatch ? yearMatch[1] : ""};
+  });
 }
 function gather(v, out, depth) {
   if (depth > 7 || v == null) return;
