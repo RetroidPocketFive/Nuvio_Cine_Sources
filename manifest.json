@@ -1,13 +1,13 @@
 {
   "name": "Vadapav Source",
-  "version": "1.0.1",
-  "description": "Nuvio provider that searches two Vadapav hosts and resolves titles without a personal API key. Use only content you are authorized to access.",
+  "version": "1.0.2",
+  "description": "Nuvio provider that searches Vadapav and resolves titles without a personal API key. Use only content you are authorized to access.",
   "scrapers": [
     {
       "id": "vadapav",
       "name": "Vadapav",
-      "description": "Searches Vadapav hosts for matching movie and episode files.",
-      "version": "1.0.1",
+      "description": "Searches Vadapav for matching movie and episode files.",
+      "version": "1.0.2",
       "author": "Custom",
       "supportedTypes": ["movie", "tv"],
       "filename": "providers/vadapav.js",
