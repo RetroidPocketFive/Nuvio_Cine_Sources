@@ -1,8 +1,8 @@
 # Vadapav Nuvio Provider
 
-Searches these two hosts:
-- `https://vadapav.mov`
-- `https://a.111477.xyz`
+Searches Vadapav using its documented search API:
+- Search: `https://vadapav.mov/api/s/{query}`
+- File endpoint: `https://vadapav.mov/f/{id}`
 
 ## Setup
 
@@ -13,10 +13,10 @@ Searches these two hosts:
 
 ## Metadata
 
-The provider no longer requires a TMDB API key. It attempts to read the title from the public TMDB web page for the ID passed by Nuvio, then searches both hosts. This is a keyless workaround, not an official TMDB API integration, and may fail if TMDB changes its page markup or blocks the request.
+The provider does not require a TMDB API key. It attempts to read the title from the public TMDB web page for the ID passed by Nuvio, then searches Vadapav. This is a keyless workaround, not an official TMDB API integration, and may fail if TMDB changes its page markup or blocks the request.
 
-## Limitations
+## Playback notes
 
-The two hostnames are configured with the same assumed API routes (`/api/s/{query}` and `/f/{id}`), but their live response schemas and playback behavior have not yet been verified in Nuvio. If a host uses different routes or response fields, the provider may return no results. The `/f/{id}` URL may be a download endpoint rather than a direct stream. Test on your device.
+Vadapav's developer documentation describes `/f/{id}` as the file endpoint and says it supports HTTP Range requests. The provider filters out folders returned by search so that only file results are offered to Nuvio. Playback still needs to be tested in the installed Nuvio build.
 
 Use only content you have the right to access. Some app-store builds of Nuvio may not support plugins; check for a Plugins section in your installed build.
