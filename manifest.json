@@ -1,18 +1,31 @@
 {
-  "name":"RetroidPocketFive Cine Sources",
-  "version":"10.0.0",
-  "description":"CineSrc-only provider with HTTP request diagnostics and browser-like request variants.",
-  "scrapers":[{
-    "id":"cinesrc",
-    "name":"CineSrc Diagnostic",
-    "description":"CineSrc TMDB movie/TV embed diagnostics; tests normal HTTP request variants before source discovery.",
-    "version":"10.0.0",
-    "author":"RetroidPocketFive",
-    "supportedTypes":["movie","tv"],
-    "filename":"providers/cinesrc.js",
-    "enabled":true,
-    "formats":["mp4","m3u8","mkv","webm"],
-    "contentLanguage":["en"],
-    "supportsExternalPlayer":true
-  }]
+  "name": "Vadapav Source",
+  "version": "1.0.0",
+  "description": "Nuvio provider using Vadapav's documented public API. Use only content you are authorized to access.",
+  "scrapers": [
+    {
+      "id": "vadapav",
+      "name": "Vadapav",
+      "description": "Searches Vadapav's public file API for movie and episode files.",
+      "version": "1.0.0",
+      "author": "Custom",
+      "supportedTypes": [
+        "movie",
+        "tv"
+      ],
+      "filename": "providers/vadapav.js",
+      "enabled": true,
+      "formats": [
+        "mp4",
+        "m3u8",
+        "mkv",
+        "webm",
+        "avi"
+      ],
+      "contentLanguage": [
+        "en"
+      ],
+      "supportsExternalPlayer": true
+    }
+  ]
 }

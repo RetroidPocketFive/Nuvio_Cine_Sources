@@ -1,1 +1,5 @@
-{"name":"nuvio-cine-sources","version":"8.0.0","private":true}
+{
+  "name": "vadapav-nuvio-provider",
+  "version": "1.0.0",
+  "private": true
+}
