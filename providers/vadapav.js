@@ -1,10 +1,9 @@
 /*
  * Vadapav Nuvio provider.
- * Searches both hosts; both hosts' API routes still need live verification.
- * Resolves the TMDB ID by reading the public TMDB title page, so no API key
- * is embedded in this public repository.
+ * Searches Vadapav's documented search API and returns its documented file
+ * endpoint. No personal API key is embedded in this public repository.
  */
-var BASES = ["https://vadapav.mov", "https://a.111477.xyz"];
+var BASE = "https://vadapav.mov";
 
 function getJson(url) {
   return fetch(url, {headers: {"Accept": "application/json"}}).then(function (r) {
@@ -78,23 +77,25 @@ function score(name, meta, mediaType, season, episode) {
   }
   return s;
 }
-function searchBase(base, meta, mediaType, season, episode) {
-  return getJson(base+"/api/s/"+encodeURIComponent(meta.title)).then(function(data){
+function search(meta, mediaType, season, episode) {
+  return getJson(BASE+"/api/s/"+encodeURIComponent(meta.title)).then(function(data){
     var objects=[]; gather(data,objects,0);
     var found=[], seen={};
     objects.forEach(function(o){
+      var type=pick(o,["type"]).toLowerCase();
+      var mime=pick(o,["mimeType","mime_type"]).toLowerCase();
+      // Search returns folders and files together. Never offer a folder as a video.
+      if (type==="folder" || mime==="drive/folder") return;
+      if (type && type!=="file") return;
       var id=pick(o,["id","uuid","fileId","file_id","fileUuid","file_uuid"]);
       var name=pick(o,["name","title","filename","fileName","file_name","path"]);
       if(!id || !name) return;
       var sc=score(name,meta,mediaType,season,episode);
       var key=id+"|"+name;
       if(sc<8 || seen[key]) return;
-      seen[key]=true; found.push({id:id,name:name,score:sc,base:base});
+      seen[key]=true; found.push({id:id,name:name,score:sc});
     });
     return found;
-  }).catch(function(e){
-    console.warn("Vadapav host "+base+":",e && e.message || String(e));
-    return [];
   });
 }
 function getStreams(tmdbId, mediaType, season, episode) {
@@ -102,19 +103,18 @@ function getStreams(tmdbId, mediaType, season, episode) {
   if (mediaType==="tv" && (season==null || episode==null)) return Promise.resolve([]);
   return getTitle(tmdbId,mediaType).then(function(meta){
     if (!meta.title) return [];
-    return Promise.all(BASES.map(function(base){
-      return searchBase(base,meta,mediaType,season,episode);
-    })).then(function(groups){
-      var all=[], seen={};
-      groups.forEach(function(items){items.forEach(function(x){
-        var key=x.base+"|"+x.id+"|"+x.name;
-        if(!seen[key]) { seen[key]=true; all.push(x); }
-      });});
+    return search(meta,mediaType,season,episode).then(function(all){
       all.sort(function(a,b){return b.score-a.score;});
       return all.slice(0,8).map(function(x){
         var q=(x.name.match(/\b(2160p|4k|1080p|720p|480p)\b/i)||["Unknown"])[0];
-        return {name:"Vadapav",title:x.name,url:x.base+"/f/"+encodeURIComponent(x.id),quality:q,
-          headers:{"Referer":x.base+"/"}};
+        return {
+          name:"Vadapav",
+          title:x.name,
+          // Documented endpoint streams the file and supports HTTP Range requests.
+          url:BASE+"/f/"+encodeURIComponent(x.id),
+          quality:q,
+          headers:{"Referer":BASE+"/"}
+        };
       });
     });
   }).catch(function(e){console.warn("Vadapav provider:",e && e.message || String(e));return [];});
