@@ -1,15 +1,14 @@
 /*
  * Vadapav Nuvio provider.
- * Public API documented at https://vadapav.mov/developers:
- *   GET /api/s/{query}
- *   GET /api/m/{id}
- *   GET /f/{id}
+ * Searches both supported hostnames:
+ *   https://vadapav.mov
+ *   https://a.111477.xyz
  *
- * Set TMDB_API_KEY to your own TMDB API v3 key before using.
- * API response schemas and in-app playback still require device testing.
+ * The two hosts are assumed to expose the same API routes; this still needs
+ * testing in Nuvio. TMDB_API_KEY is currently required for title lookup.
  */
-var BASE = "https://vadapav.mov";
-var TMDB_API_KEY = ""; // Add your TMDB API v3 key.
+var BASES = ["https://vadapav.mov", "https://a.111477.xyz"];
+var TMDB_API_KEY = ""; // Add a TMDB API v3 key, or replace title lookup later.
 
 function getJson(url) {
   return fetch(url, {headers: {"Accept": "application/json"}}).then(function (r) {
@@ -23,7 +22,7 @@ function norm(s) {
     .replace(/[._]+/g, " ").replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
 }
 function getTitle(id, mediaType) {
-  if (!TMDB_API_KEY) return Promise.reject(new Error("Set TMDB_API_KEY in providers/vadapav.js"));
+  if (!TMDB_API_KEY) return Promise.reject(new Error("TMDB_API_KEY is not configured"));
   var type = mediaType === "tv" ? "tv" : "movie";
   return getJson("https://api.themoviedb.org/3/" + type + "/" + encodeURIComponent(String(id)) +
     "?api_key=" + encodeURIComponent(TMDB_API_KEY)).then(function (d) {
@@ -60,28 +59,43 @@ function score(name, meta, mediaType, season, episode) {
   }
   return s;
 }
+function searchBase(base, meta, mediaType, season, episode) {
+  return getJson(base+"/api/s/"+encodeURIComponent(meta.title)).then(function(data){
+    var objects=[]; gather(data,objects,0);
+    var found=[], seen={};
+    objects.forEach(function(o){
+      var id=pick(o,["id","uuid","fileId","file_id","fileUuid","file_uuid"]);
+      var name=pick(o,["name","title","filename","fileName","file_name","path"]);
+      if(!id || !name) return;
+      var sc=score(name,meta,mediaType,season,episode);
+      var key=id+"|"+name;
+      if(sc<8 || seen[key]) return;
+      seen[key]=true; found.push({id:id,name:name,score:sc,base:base});
+    });
+    return found;
+  }).catch(function(e){
+    console.warn("Vadapav host "+base+":",e && e.message || String(e));
+    return [];
+  });
+}
 function getStreams(tmdbId, mediaType, season, episode) {
   if (mediaType!=="movie" && mediaType!=="tv") return Promise.resolve([]);
   if (mediaType==="tv" && (season==null || episode==null)) return Promise.resolve([]);
   return getTitle(tmdbId,mediaType).then(function(meta){
     if (!meta.title) return [];
-    return getJson(BASE+"/api/s/"+encodeURIComponent(meta.title)).then(function(data){
-      var objects=[]; gather(data,objects,0);
-      var seen={}, found=[];
-      objects.forEach(function(o){
-        var id=pick(o,["id","uuid","fileId","file_id","fileUuid","file_uuid"]);
-        var name=pick(o,["name","title","filename","fileName","file_name","path"]);
-        if(!id || !name) return;
-        var sc=score(name,meta,mediaType,season,episode);
-        var key=id+"|"+name;
-        if(sc<8 || seen[key]) return;
-        seen[key]=true; found.push({id:id,name:name,score:sc});
-      });
-      found.sort(function(a,b){return b.score-a.score;});
-      return found.slice(0,8).map(function(x){
+    return Promise.all(BASES.map(function(base){
+      return searchBase(base,meta,mediaType,season,episode);
+    })).then(function(groups){
+      var all=[], seen={};
+      groups.forEach(function(items){items.forEach(function(x){
+        var key=x.base+"|"+x.id+"|"+x.name;
+        if(!seen[key]) { seen[key]=true; all.push(x); }
+      });});
+      all.sort(function(a,b){return b.score-a.score;});
+      return all.slice(0,8).map(function(x){
         var q=(x.name.match(/\b(2160p|4k|1080p|720p|480p)\b/i)||["Unknown"])[0];
-        return {name:"Vadapav",title:x.name,url:BASE+"/f/"+encodeURIComponent(x.id),quality:q,
-          headers:{"Referer":BASE+"/"}};
+        return {name:"Vadapav",title:x.name,url:x.base+"/f/"+encodeURIComponent(x.id),quality:q,
+          headers:{"Referer":x.base+"/"}};
       });
     });
   }).catch(function(e){console.warn("Vadapav provider:",e && e.message || String(e));return [];});
