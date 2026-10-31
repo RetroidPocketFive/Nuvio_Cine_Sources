@@ -1,5 +1,7 @@
+"use strict";
+
 /*
- * Vadapav cross-app provider v1.0.5
+ * Vadapav cross-app provider v1.0.6
  * Uses Nuvio's built-in TMDB API key bridge for metadata.
  */
 var BASE = "https://vadapav.mov";
@@ -70,7 +72,7 @@ function search(title){
   });
 }
 function getStreams(tmdbId,mediaType,season,episode){
-  console.log("Vadapav v1.0.5 start id="+tmdbId+" type="+mediaType);
+  console.log("Vadapav v1.0.6 start id="+tmdbId+" type="+mediaType);
   if(mediaType!=="movie"&&mediaType!=="tv")return Promise.resolve([]);
   if(mediaType==="tv"&&(season==null||episode==null))return Promise.resolve([]);
   return getMeta(tmdbId,mediaType).then(function(meta){
@@ -94,6 +96,6 @@ function getStreams(tmdbId,mediaType,season,episode){
         return {name:"Vadapav",title:x.name,url:BASE+"/f/"+encodeURIComponent(x.id),quality:q,type:"video",provider:"vadapav",headers:{"Referer":BASE+"/"}};
       });
     });
-  }).catch(function(e){console.error("Vadapav v1.0.5 error: "+(e&&e.message||String(e)));return [];});
+  }).catch(function(e){console.error("Vadapav v1.0.6 error: "+(e&&e.message||String(e)));return [];});
 }
 if(typeof module!=="undefined"&&module.exports)module.exports={getStreams:getStreams};
