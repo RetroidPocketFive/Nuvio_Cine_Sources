@@ -71,7 +71,7 @@ function initPynvixApi() {
   });
 }
 
-initPynvixApi().catch(console.error);
+// Initialize on demand inside getStreams so requests cannot race startup.
 
 const TMDB_API_KEY = "6e6ab700b6477171ee6c23d504b1e9cb";
 
@@ -355,6 +355,7 @@ function getStreams(tmdbId, mediaType, season, episode) {
     const e = episode ?? 1;
 
     try {
+      yield initPynvixApi();
       const imdbId = yield getImdbId(tmdbId, isSeries ? "tv" : "movie");
       if (!imdbId) return [];
 
