@@ -1,5 +1,5 @@
 /*
- * Vadapav Nuvio provider v1.0.4
+ * Vadapav cross-app provider v1.0.5
  * Uses Nuvio's built-in TMDB API key bridge for metadata.
  */
 var BASE = "https://vadapav.mov";
@@ -11,16 +11,19 @@ function headers(accept, referer) {
 function getJson(url, referer) {
   return fetch(url,{headers:headers("application/json, text/plain, */*",referer)}).then(function(r){
     if(!r.ok) throw new Error("HTTP "+r.status+" "+url);
-    return r.text().then(function(t){
-      if(!t) throw new Error("Empty response from "+url);
-      try{return JSON.parse(t);}catch(e){throw new Error("Expected JSON from "+url+": "+t.slice(0,100));}
-    });
+    return r.json();
   });
 }
 function getMeta(id, type) {
   var apiKey = "";
-  try { apiKey = typeof __get_tmdb_api_key==="function" ? __get_tmdb_api_key() : ""; } catch(e) {}
-  if(!apiKey) throw new Error("Nuvio did not provide its TMDB API key");
+  try {
+    if (typeof TMDB_API_KEY !== "undefined" && TMDB_API_KEY) apiKey = TMDB_API_KEY;
+  } catch(e) {}
+  try {
+    if (!apiKey && typeof __get_tmdb_api_key === "function") apiKey = __get_tmdb_api_key();
+  } catch(e) {}
+  // Public client key fallback used by the cross-app Eclipsia provider ecosystem.
+  if (!apiKey) apiKey = "6e6ab700b6477171ee6c23d504b1e9cb";
   var kind = type==="tv" ? "tv" : "movie";
   var url="https://api.themoviedb.org/3/"+kind+"/"+encodeURIComponent(String(id))+"?api_key="+encodeURIComponent(apiKey);
   return getJson(url,"https://www.themoviedb.org/").then(function(d){
@@ -67,7 +70,7 @@ function search(title){
   });
 }
 function getStreams(tmdbId,mediaType,season,episode){
-  console.log("Vadapav v1.0.4 start id="+tmdbId+" type="+mediaType);
+  console.log("Vadapav v1.0.5 start id="+tmdbId+" type="+mediaType);
   if(mediaType!=="movie"&&mediaType!=="tv")return Promise.resolve([]);
   if(mediaType==="tv"&&(season==null||episode==null))return Promise.resolve([]);
   return getMeta(tmdbId,mediaType).then(function(meta){
@@ -88,9 +91,9 @@ function getStreams(tmdbId,mediaType,season,episode){
       console.log("Vadapav matched "+matches.length+" files");
       return matches.slice(0,10).map(function(x){
         var q=(x.name.match(/\b(2160p|4k|1080p|720p|480p)\b/i)||["Unknown"])[0];
-        return {name:"Vadapav",title:x.name,url:BASE+"/f/"+encodeURIComponent(x.id),quality:q,headers:{"Referer":BASE+"/"}};
+        return {name:"Vadapav",title:x.name,url:BASE+"/f/"+encodeURIComponent(x.id),quality:q,type:"video",provider:"vadapav",headers:{"Referer":BASE+"/"}};
       });
     });
-  }).catch(function(e){console.error("Vadapav v1.0.4 error: "+(e&&e.message||String(e)));return [];});
+  }).catch(function(e){console.error("Vadapav v1.0.5 error: "+(e&&e.message||String(e)));return [];});
 }
 if(typeof module!=="undefined"&&module.exports)module.exports={getStreams:getStreams};
