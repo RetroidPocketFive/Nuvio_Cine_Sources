@@ -28,10 +28,10 @@
       ]
     },
     {
-      "id": "vornix-test",
-      "name": "Vornix (Eclipsia test)",
-      "description": "Temporary Eclipsia 4K provider compatibility test.",
-      "version": "1.4.1-test",
+      "id": "vornix",
+      "name": "Vornix.",
+      "description": "Provider: Multi Providers (4k) | English",
+      "version": "1.4.0",
       "author": "Eclipsia",
       "supportedTypes": [
         "movie",
@@ -46,7 +46,13 @@
       ],
       "logo": "https://raw.githubusercontent.com/eclipsia-404/util-nuvio/refs/heads/main/icons/cf.png",
       "contentLanguage": [
-        "en"
+        "en",
+        "bn",
+        "hi",
+        "ja",
+        "pt",
+        "ar",
+        "tr"
       ]
     }
   ]
