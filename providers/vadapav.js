@@ -1,20 +1,35 @@
 /*
  * Vadapav Nuvio provider.
- * Searches Vadapav's documented search API and returns its documented file
- * endpoint. No personal API key is embedded in this public repository.
+ * Resolves titles from TMDB, searches Vadapav, and returns file streams.
  */
 var BASE = "https://vadapav.mov";
 
-function getJson(url) {
-  return fetch(url, {headers: {"Accept": "application/json"}}).then(function (r) {
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    return r.json();
-  });
+function requestHeaders(accept, referer) {
+  var h = {"Accept": accept, "Accept-Language": "en-US,en;q=0.9"};
+  if (referer) h["Referer"] = referer;
+  return h;
 }
 function getText(url) {
-  return fetch(url, {headers: {"Accept": "text/html"}}).then(function (r) {
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    return r.text();
+  return fetch(url, {headers: requestHeaders("text/html,application/xhtml+xml,*/*")}).then(function (r) {
+    if (!r.ok) throw new Error("HTTP " + r.status + " for " + url);
+    return r.text().then(function (body) {
+      if (!body) throw new Error("Empty response from " + url);
+      return body;
+    });
+  });
+}
+/* Read as text first: Nuvio's fetch JSON helper can return null on invalid JSON. */
+function getJson(url) {
+  return fetch(url, {headers: requestHeaders("application/json, text/plain, */*", BASE + "/")}).then(function (r) {
+    if (!r.ok) throw new Error("HTTP " + r.status + " for " + url);
+    return r.text().then(function (body) {
+      if (!body) throw new Error("Empty API response from " + url);
+      try {
+        return JSON.parse(body);
+      } catch (e) {
+        throw new Error("Vadapav returned non-JSON (" + body.slice(0, 100).replace(/\s+/g, " ") + ")");
+      }
+    });
   });
 }
 function decodeHtml(s) {
@@ -42,9 +57,9 @@ function getTitle(id, mediaType) {
       if (m && m[1]) title = decodeHtml(m[1]).trim();
     }
     title = title.replace(/\s*[-|–—:]\s*The Movie Database\s*\(TMDB\).*$/i, "").trim();
-    if (!title) throw new Error("Could not read title from TMDB page");
+    if (!title) throw new Error("Could not extract title from TMDB page for ID " + id);
     var yearMatch = html.match(/(?:release_date|first_air_date|release-date|first-air-date)[^>]{0,100}?((?:19|20)\d{2})/i);
-    if (!yearMatch) yearMatch = html.match(/\b((?:19|20)\d{2})\b/);
+    if (!yearMatch) yearMatch = title.match(/\b((?:19|20)\d{2})\b/);
     return {title:title, original:title, year:yearMatch ? yearMatch[1] : ""};
   });
 }
@@ -77,14 +92,20 @@ function score(name, meta, mediaType, season, episode) {
   }
   return s;
 }
+function searchApi(title) {
+  var encoded = encodeURIComponent(title);
+  return getJson(BASE + "/api/s/" + encoded).catch(function (firstError) {
+    console.warn("Vadapav path search failed; trying q parameter:", firstError.message || firstError);
+    return getJson(BASE + "/api/s/?q=" + encoded);
+  });
+}
 function search(meta, mediaType, season, episode) {
-  return getJson(BASE+"/api/s/"+encodeURIComponent(meta.title)).then(function(data){
+  return searchApi(meta.title).then(function(data){
     var objects=[]; gather(data,objects,0);
     var found=[], seen={};
     objects.forEach(function(o){
       var type=pick(o,["type"]).toLowerCase();
       var mime=pick(o,["mimeType","mime_type"]).toLowerCase();
-      // Search returns folders and files together. Never offer a folder as a video.
       if (type==="folder" || mime==="drive/folder") return;
       if (type && type!=="file") return;
       var id=pick(o,["id","uuid","fileId","file_id","fileUuid","file_uuid"]);
@@ -95,14 +116,16 @@ function search(meta, mediaType, season, episode) {
       if(sc<8 || seen[key]) return;
       seen[key]=true; found.push({id:id,name:name,score:sc});
     });
+    console.log("Vadapav search found " + found.length + " matching files for " + meta.title);
     return found;
   });
 }
 function getStreams(tmdbId, mediaType, season, episode) {
+  console.log("Vadapav starting: id=" + tmdbId + " type=" + mediaType);
   if (mediaType!=="movie" && mediaType!=="tv") return Promise.resolve([]);
   if (mediaType==="tv" && (season==null || episode==null)) return Promise.resolve([]);
   return getTitle(tmdbId,mediaType).then(function(meta){
-    if (!meta.title) return [];
+    console.log("Vadapav resolved title: " + meta.title + (meta.year ? " (" + meta.year + ")" : ""));
     return search(meta,mediaType,season,episode).then(function(all){
       all.sort(function(a,b){return b.score-a.score;});
       return all.slice(0,8).map(function(x){
@@ -110,13 +133,15 @@ function getStreams(tmdbId, mediaType, season, episode) {
         return {
           name:"Vadapav",
           title:x.name,
-          // Documented endpoint streams the file and supports HTTP Range requests.
           url:BASE+"/f/"+encodeURIComponent(x.id),
           quality:q,
           headers:{"Referer":BASE+"/"}
         };
       });
     });
-  }).catch(function(e){console.warn("Vadapav provider:",e && e.message || String(e));return [];});
+  }).catch(function(e){
+    console.error("Vadapav provider failed:",e && e.message || String(e));
+    return [];
+  });
 }
 if (typeof module!=="undefined" && module.exports) module.exports={getStreams:getStreams};
