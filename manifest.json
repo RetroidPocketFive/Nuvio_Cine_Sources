@@ -1,6 +1,6 @@
 {
   "name": "Nuvio Source Compatibility Test",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Nuvio-compatible provider that searches Vadapav for matching movie and episode files.",
   "scrapers": [
     {
@@ -28,10 +28,10 @@
       ]
     },
     {
-      "id": "soryn-test",
+      "id": "pynvix-test",
       "name": "Pynvix (Eclipsia test)",
-      "description": "Temporary Eclipsia Pynvix reference provider used to verify Nuvio/ARVIO compatibility.",
-      "version": "1.6.0-test",
+      "description": "Temporary Eclipsia multi-source reference provider; initialization is awaited before searching.",
+      "version": "1.6.1-test",
       "author": "Eclipsia",
       "supportedTypes": [
         "movie",
