@@ -1,6 +1,6 @@
 {
   "name": "Nuvio Source Compatibility Test",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Nuvio-compatible provider that searches Vadapav for matching movie and episode files.",
   "scrapers": [
     {
@@ -28,31 +28,26 @@
       ]
     },
     {
-      "id": "vornix",
-      "name": "Vornix.",
-      "description": "Provider: Multi Providers (4k) | English",
-      "version": "1.4.0",
+      "id": "nyxora",
+      "name": "Nyxora.",
+      "description": "Provider: Vidlink | English, Bangla, Hindi",
+      "version": "2.2.0",
       "author": "Eclipsia",
       "supportedTypes": [
         "movie",
         "tv"
       ],
-      "filename": "providers/eclipsia_test_vornix.js",
+      "filename": "providers/eclipsia_test_nyxora.js",
       "enabled": true,
       "formats": [
-        "m3u8",
         "mp4",
-        "mkv"
+        "m3u8"
       ],
-      "logo": "https://raw.githubusercontent.com/eclipsia-404/util-nuvio/refs/heads/main/icons/cf.png",
+      "logo": "",
       "contentLanguage": [
         "en",
-        "bn",
         "hi",
-        "ja",
-        "pt",
-        "ar",
-        "tr"
+        "bn"
       ]
     }
   ]
