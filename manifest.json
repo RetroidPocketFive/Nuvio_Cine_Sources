@@ -1,6 +1,6 @@
 {
-  "name": "Vadapav Source",
-  "version": "1.0.6",
+  "name": "Nuvio Source Compatibility Test",
+  "version": "1.0.7",
   "description": "Nuvio-compatible provider that searches Vadapav for matching movie and episode files.",
   "scrapers": [
     {
@@ -9,12 +9,46 @@
       "description": "Searches Vadapav for matching movie and episode files.",
       "version": "1.0.6",
       "author": "Custom",
-      "supportedTypes": ["movie", "tv"],
+      "supportedTypes": [
+        "movie",
+        "tv"
+      ],
       "filename": "providers/vadapav.js",
       "enabled": true,
-      "formats": ["mp4", "m3u8", "mkv", "webm", "avi"],
+      "formats": [
+        "mp4",
+        "m3u8",
+        "mkv",
+        "webm",
+        "avi"
+      ],
       "logo": "",
-      "contentLanguage": ["en"]
+      "contentLanguage": [
+        "en"
+      ]
+    },
+    {
+      "id": "soryn-test",
+      "name": "Soryn (Eclipsia test)",
+      "description": "Temporary Eclipsia reference provider used to verify Nuvio/ARVIO compatibility.",
+      "version": "3.3.0-test",
+      "author": "Eclipsia",
+      "supportedTypes": [
+        "movie",
+        "tv"
+      ],
+      "filename": "providers/eclipsia_test_soryn.js",
+      "enabled": true,
+      "formats": [
+        "mp4",
+        "m3u8",
+        "mkv"
+      ],
+      "logo": "https://raw.githubusercontent.com/eclipsia-404/util-nuvio/refs/heads/main/icons/icon.png",
+      "contentLanguage": [
+        "en",
+        "hi"
+      ]
     }
   ]
 }
