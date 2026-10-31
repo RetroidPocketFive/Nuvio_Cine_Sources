@@ -65,7 +65,7 @@ function initVornixApi() {
   });
 }
 
-// Initialize on demand before requesting streams.
+initVornixApi().catch(console.error);
 
 const TMDB_API_KEY = "6e6ab700b6477171ee6c23d504b1e9cb";
 
@@ -244,7 +244,6 @@ function getStreams(tmdbId, mediaType, season, episode) {
     const e = episode ?? 1;
 
     try {
-      yield initVornixApi();
       const imdbId = yield getImdbId(tmdbId, isSeries ? "tv" : "movie");
       if (!imdbId) return [];
 
